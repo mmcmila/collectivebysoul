@@ -1,29 +1,71 @@
-# Yogagrove
+# Collective by Soul · Yogagrove
 
-A responsive recreation of the Yogagrove Framer homepage using Next.js App Router, TypeScript, shadcn/ui (Base UI), Tailwind CSS, and Motion.
+A responsive recreation of the [Yogagrove Framer homepage](https://yogagrove.framer.website/), built with Next.js App Router, TypeScript, shadcn/ui (Base UI), Tailwind CSS, and Motion.
 
-## Run locally
+## Requirements
+
+- Node.js 20.9 or newer; use an actively supported LTS release.
+- pnpm 10.17.1, pinned in `package.json`.
+
+**Use pnpm for all package commands.** Commit `pnpm-lock.yaml` with dependency changes. Do not add other package-manager lockfiles. The install script rejects other package managers during normal lifecycle execution.
+
+If Corepack is available on your machine, run `corepack enable` once. It will select the pinned pnpm version when you run commands in this repository. Otherwise, follow the [pnpm installation guide](https://pnpm.io/installation) and install the pinned version.
+
+## Get started
 
 ```sh
-npm install
-npm run dev
+git clone git@github.com:hasanharman/collectivebysoul.git
+cd collectivebysoul
+pnpm install --frozen-lockfile
+pnpm dev
 ```
 
-Open http://localhost:3000. For production, run `npm run build` and `npm start`. Run `npm run lint` to check the source.
+Open [localhost:3000](http://localhost:3000). No environment variables or external services are required for the current frontend.
 
-## Structure
+## Commands
 
-- `app/page.tsx` — page entry point.
-- `components/yoga-grove.tsx` — page sections, editable content arrays, animation helpers, and dialogs.
-- `components/ui/` — shadcn primitives.
-- `app/globals.css` — palette, layout, responsive breakpoints, and reduced-motion styles.
-- `app/fonts/` — self-hosted Poppins fonts; no Google Fonts connection required at build time.
-- `public/images/` — locally stored reference imagery.
+| Command | Purpose |
+| --- | --- |
+| `pnpm dev` | Start the development server |
+| `pnpm lint` | Run ESLint |
+| `pnpm build` | Build for production and check TypeScript |
+| `pnpm start` | Serve the production build after `pnpm build` |
+| `pnpm add <package>` | Add a runtime dependency |
+| `pnpm add -D <package>` | Add a development dependency |
+| `pnpm exec shadcn add <component>` | Add a shadcn component using the installed CLI |
 
-## Interactions
+For CI and clean checkouts, use `pnpm install --frozen-lockfile`, then `pnpm lint` and `pnpm build`.
 
-Hero entrance and parallax, scroll reveals, sticky stacking method cards, hover effects, mobile navigation, FAQs, class selection, pricing enquiries, and short journal previews. Motion respects the visitor’s reduced-motion preference.
+## Project structure
 
-This is a single-page frontend recreation. About and journal content opens in dialogs. The schedule displays the reference class frequencies, not live availability. Booking and pricing actions open an enquiry dialog with email and telephone links; no reservations, payments, or submissions are stored. Replace the reference studio contact details and connect a booking provider when needed.
+| Path | Purpose |
+| --- | --- |
+| `app/page.tsx` | Server-rendered page entry point |
+| `app/layout.tsx` | Root layout, metadata, and local fonts |
+| `components/yoga-grove.tsx` | Sections, content arrays, animation helpers, and dialogs |
+| `components/ui/` | shadcn components built on Base UI |
+| `components.json` | shadcn configuration and aliases |
+| `app/globals.css` | Design tokens, layouts, spacing, and responsive styles |
+| `app/fonts/` | Self-hosted Poppins fonts and their license |
+| `public/images/` | Reference imagery served locally |
+| `scripts/check-package-manager.mjs` | pnpm install guard |
+| `AGENTS.md` | Repository guidance for coding agents |
+| `CLAUDE.md` | Imports AGENTS.md to keep guidance in one place |
 
-Reference: https://yogagrove.framer.website/. Imagery and studio content come from the reference; journal preview text is sample content. Fonts: Poppins, distributed under the SIL Open Font License (see `app/fonts/OFL.txt`).
+## Editing the site
+
+Edit classes, plans, FAQs, teachers, and journal previews in `components/yoga-grove.tsx`. Update metadata in `app/layout.tsx` and visual tokens and section spacing in `app/globals.css`. Keep image descriptions meaningful and update asset paths when replacing images.
+
+The page includes a hero entrance and parallax, scroll reveals, sticky stacking cards, hover effects, mobile navigation, FAQs, class selection, pricing enquiries, and journal previews. Motion and CSS respect reduced-motion preferences.
+
+Check both desktop and mobile after layout changes, especially the testimonial-to-pricing transition and spacing around the closing banner. Run `pnpm lint` and `pnpm build` before submitting changes. There is currently no automated test suite; check affected interactions in the browser.
+
+## Current scope
+
+This is a single-page frontend recreation. About and journal content opens in dialogs. The schedule displays class frequencies rather than live availability. Booking and pricing actions open an enquiry dialog with email and telephone links; no reservations, payments, or submissions are stored.
+
+Replace the reference studio contact details and connect a booking provider before accepting real bookings. The privacy link currently points to the reference website. Production hosting is not configured in this repository.
+
+## Assets and attribution
+
+Imagery and studio content come from the [reference site](https://yogagrove.framer.website/); journal preview text is sample content. Confirm appropriate permissions before reusing reference assets for another brand. Poppins is distributed under the [SIL Open Font License](app/fonts/OFL.txt) and is hosted locally, so builds do not need a Google Fonts connection.
