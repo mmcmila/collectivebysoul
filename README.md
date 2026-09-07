@@ -1,36 +1,29 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Yogagrove
 
-## Getting Started
+A responsive recreation of the Yogagrove Framer homepage using Next.js App Router, TypeScript, shadcn/ui (Base UI), Tailwind CSS, and Motion.
 
-First, run the development server:
+## Run locally
 
-```bash
+```sh
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000. For production, run `npm run build` and `npm start`. Run `npm run lint` to check the source.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `app/page.tsx` — page entry point.
+- `components/yoga-grove.tsx` — page sections, editable content arrays, animation helpers, and dialogs.
+- `components/ui/` — shadcn primitives.
+- `app/globals.css` — palette, layout, responsive breakpoints, and reduced-motion styles.
+- `app/fonts/` — self-hosted Poppins fonts; no Google Fonts connection required at build time.
+- `public/images/` — locally stored reference imagery.
 
-## Learn More
+## Interactions
 
-To learn more about Next.js, take a look at the following resources:
+Hero entrance and parallax, scroll reveals, sticky stacking method cards, hover effects, mobile navigation, FAQs, class selection, pricing enquiries, and short journal previews. Motion respects the visitor’s reduced-motion preference.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+This is a single-page frontend recreation. About and journal content opens in dialogs. The schedule displays the reference class frequencies, not live availability. Booking and pricing actions open an enquiry dialog with email and telephone links; no reservations, payments, or submissions are stored. Replace the reference studio contact details and connect a booking provider when needed.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Reference: https://yogagrove.framer.website/. Imagery and studio content come from the reference; journal preview text is sample content. Fonts: Poppins, distributed under the SIL Open Font License (see `app/fonts/OFL.txt`).
