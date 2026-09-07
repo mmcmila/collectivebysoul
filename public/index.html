@@ -113,12 +113,22 @@ nav{position:sticky;top:0;z-index:80;background:rgba(242,234,228,.9);backdrop-fi
 .card p{font-size:.94rem}
 @media(max-width:760px){.cards{grid-template-columns:1fr}}
 
-/* benefits */
-.gal{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-top:1.5rem}
-.gal img{border-radius:14px;width:100%;aspect-ratio:1;object-fit:cover;cursor:zoom-in;transition:transform .5s}
-.gal img:hover{transform:scale(1.03)}
-.gal img:first-child{grid-column:span 2;aspect-ratio:2/1}
-@media(max-width:860px){.gal{grid-template-columns:repeat(2,1fr)}.gal img:first-child{grid-column:span 2}}
+/* place galleries */
+.gallery-title{font-size:clamp(3.2rem,8vw,6.4rem);margin-bottom:2rem}
+.venue-grid{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:110px;grid-auto-flow:dense;gap:1rem}
+.venue-grid img,.boat-grid img{width:100%;height:100%;object-fit:cover;border-radius:14px;cursor:zoom-in;transition:transform .45s,filter .45s}
+.venue-grid img:hover,.boat-grid img:hover{transform:scale(.99);filter:saturate(1.08)}
+.venue-grid img:nth-child(1){grid-column:span 7;grid-row:span 4}
+.venue-grid img:nth-child(2),.venue-grid img:nth-child(3){grid-column:span 5;grid-row:span 2}
+.venue-grid img:nth-child(4),.venue-grid img:nth-child(5),.venue-grid img:nth-child(6){grid-column:span 4;grid-row:span 3}
+.venue-grid img:nth-child(7){grid-column:span 5;grid-row:span 3}
+.venue-grid img:nth-child(8){grid-column:span 7;grid-row:span 3}
+.venue-grid img:nth-child(9){grid-column:span 12;grid-row:span 3}
+.boat-section{background:var(--ink);color:var(--bg)}
+.boat-section .gallery-title{color:var(--bg)}
+.boat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem}
+.boat-grid img{aspect-ratio:4/3}
+@media(max-width:760px){.venue-grid{grid-template-columns:repeat(2,1fr);grid-auto-rows:150px}.venue-grid img:nth-child(n){grid-column:span 1;grid-row:span 2}.venue-grid img:nth-child(1),.venue-grid img:nth-child(9){grid-column:span 2;grid-row:span 2}.boat-grid{grid-template-columns:1fr}.boat-grid img{aspect-ratio:4/3}}
 
 /* people */
 .people{display:grid;grid-template-columns:repeat(3,1fr);gap:1.6rem;margin-top:2.6rem}
@@ -142,7 +152,7 @@ nav{position:sticky;top:0;z-index:80;background:rgba(242,234,228,.9);backdrop-fi
 @media(max-width:760px){.mrow{grid-template-columns:6.5rem 1fr}.mrow span{grid-column:2;text-align:left;font-size:.82rem}}
 
 /* pricing */
-.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem;margin-top:2.8rem;align-items:start}
+.plans{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.4rem;margin:2.8rem auto 0;align-items:start;max-width:820px}
 .plan{background:var(--card);border-radius:var(--r);padding:2rem 1.8rem;border:1px solid var(--line)}
 .plan.hot{background:var(--ink);color:var(--bg);border-color:var(--ink);transform:translateY(-10px)}
 .plan.hot p,.plan.hot li{color:rgba(242,234,228,.72)}
@@ -318,14 +328,27 @@ footer li{padding:.28rem 0;font-size:.92rem}
 
 <section id="galeri">
   <div class="wrap">
-    <div class="eyebrow" data-copy="gallery.eyebrow">Mekândan</div>
-    <div class="gal" id="gal">
-      <img src="assets/g2.jpg" alt="Kayıkhane">
-      <img src="assets/g3.jpg" alt="Çim">
-      <img src="assets/g5.jpg" alt="Deniz">
-      <img src="assets/g6.jpg" alt="İskele">
-      <img src="assets/boat_night.jpg" alt="Gece dönüşü">
-      <img src="assets/boat_bow.jpg" alt="Güverte">
+    <h2 class="gallery-title" data-copy="gallery.house">Ev</h2>
+    <div class="venue-grid lightbox-gallery">
+      <img src="assets/house-1.jpg" alt="Gün batımında Villa Büyükada'nın havuzu ve bahçesi">
+      <img src="assets/house-5.jpg" alt="Villa Büyükada'nın taş kayıkhanesi ve iskelesi">
+      <img src="assets/house-3.jpg" alt="Palmiye ağaçlarının önünde havuz">
+      <img src="assets/house-2.jpg" alt="Akşam ışığında denize bakan iskele">
+      <img src="assets/house-7.jpg" alt="Deniz manzaralı ev terası">
+      <img src="assets/house-8.jpg" alt="Bahçeye inen merdivenler">
+      <img src="assets/house-9.jpg" alt="Mor çiçeklerin ardından havuz ve deniz">
+      <img src="assets/house-6.jpg" alt="Çamların altında havuz ve bahçe">
+      <img src="assets/house-4.jpg" alt="Gece ışıklarıyla Villa Büyükada ve havuz">
+    </div>
+  </div>
+</section>
+
+<section id="tekne" class="boat-section">
+  <div class="wrap">
+    <h2 class="gallery-title" data-copy="gallery.boat">Tekne</h2>
+    <div class="boat-grid lightbox-gallery">
+      <img src="assets/boat.jpg" alt="İstanbul'dan adaya yolculukta teknenin ön güvertesi">
+      <img src="assets/boat_night.jpg" alt="Gece dönüşü için özel tekne">
     </div>
   </div>
 </section>
@@ -368,25 +391,18 @@ footer li{padding:.28rem 0;font-size:.92rem}
     </div>
     <div class="plans">
       <div class="plan">
-        <div class="tag" data-copy="tickets.earlyTag">8 Eylül'e kadar</div>
-        <h3 data-copy="tickets.early">Erken bilet</h3>
+        <div class="tag" data-copy="tickets.passTag">Ulaşım hariç</div>
+        <h3 data-copy="tickets.pass">Island Pass</h3>
         <div class="price">5.000 ₺</div><div class="per" data-copy="tickets.perPerson">kişi başı</div>
         <ul><li data-copy="tickets.feature2">Tüm atölyeler</li><li data-copy="tickets.feature3">Bite foods</li><li data-copy="tickets.drinks">House pitcher · alkollü ve alkolsüz</li><li data-copy="tickets.feature4">Havuz, bahçe ve iskele</li><li data-copy="tickets.limited">Sınırlı sayıda</li></ul>
         <a class="btn btn-line" href="#basvuru" data-copy="nav.apply">Başvur</a>
       </div>
       <div class="plan hot">
-        <div class="tag" data-copy="tickets.fullTag">Standart</div>
+        <div class="tag" data-copy="tickets.fullTag">Tekne dahil</div>
         <h3 style="color:var(--bg)" data-copy="tickets.full">Tam bilet</h3>
         <div class="price">8.000 ₺</div><div class="per" style="color:rgba(242,234,228,.72)" data-copy="tickets.perPerson">kişi başı</div>
-        <ul><li data-copy="tickets.feature2">Tüm atölyeler</li><li data-copy="tickets.feature3">Bite foods</li><li data-copy="tickets.drinks">House pitcher · alkollü ve alkolsüz</li><li data-copy="tickets.feature4">Havuz, bahçe ve iskele</li><li data-copy="tickets.bar">Bar kokteylleri ayrıca</li></ul>
+        <ul><li data-copy="tickets.boat">Gidiş dönüş özel tekne</li><li data-copy="tickets.feature2">Tüm atölyeler</li><li data-copy="tickets.feature3">Bite foods</li><li data-copy="tickets.drinks">House pitcher · alkollü ve alkolsüz</li><li data-copy="tickets.feature4">Havuz, bahçe ve iskele</li><li data-copy="tickets.bar">Bar kokteylleri ayrıca</li></ul>
         <a class="btn btn-fill" href="#basvuru" data-copy="nav.apply">Başvur</a>
-      </div>
-      <div class="plan">
-        <div class="tag" data-copy="tickets.duoTag">İki kişi</div>
-        <h3 data-copy="tickets.duo">Çift bilet</h3>
-        <div class="price">15.000 ₺</div><div class="per" data-copy="tickets.forTwo">iki kişi</div>
-        <ul><li data-copy="tickets.duo1">İki tam bilet</li><li data-copy="tickets.feature2">Tüm atölyeler</li><li data-copy="tickets.feature3">Bite foods</li><li data-copy="tickets.duo2">Her iki misafir için ayrı başvuru</li></ul>
-        <a class="btn btn-line" href="#basvuru" data-copy="nav.apply">Başvur</a>
       </div>
     </div>
   </div>
@@ -420,7 +436,7 @@ footer li{padding:.28rem 0;font-size:.92rem}
     <div class="eyebrow" data-copy="faq.eyebrow">Sık sorulanlar</div>
     <h2 data-copy="faq.title">Bilmek isteyebileceklerin.</h2>
     <div class="faq" style="margin-top:2rem">
-      <details><summary data-copy="faq.q1">Bilete neler dahil?</summary><p data-copy="faq.a1">Tüm atölyeler, Bite foods, alkollü ve alkolsüz house pitcher içecekler; havuz, bahçe ve iskele kullanımı. Bar kokteylleri ayrıca.</p></details>
+      <details><summary data-copy="faq.q1">Bilete neler dahil?</summary><p data-copy="faq.a1">Her iki bilete tüm atölyeler, Bite foods, alkollü ve alkolsüz house pitcher içecekler; havuz, bahçe ve iskele kullanımı dahil. Tam bilet ayrıca gidiş dönüş özel tekneyi içerir; Island Pass ulaşım içermez. Bar kokteylleri ayrıca.</p></details>
       <details><summary data-copy="faq.q2">Tekneyi kaçırırsam ne olur?</summary><p data-copy="faq.a2">Vapurla gelip mekâna kendi imkânınla ulaşabilirsin; ancak açılışı ve tekne deneyimini kaçırırsın. Kalkış saatleri kesin: Karaköy 12:30, Kadıköy 13:00.</p></details>
       <details><summary data-copy="faq.q3">Atölyelere nasıl katılıyorum?</summary><p data-copy="faq.a3">Atölye tercihlerini başvurun onaylandıktan sonra, etkinlikten önce ayrıca alıyoruz. Kontenjanı sınırlı alanları bu tercihlere göre planlıyoruz.</p></details>
       <details><summary data-copy="faq.q4">Ne getirmeliyim?</summary><p data-copy="faq.a4">Mayo, havlu ve akşam serinliği için ince bir katman. Geri kalanı biz hazırlıyoruz.</p></details>
@@ -530,13 +546,13 @@ const EN={
  "place.eyebrow":"The place","place.title":"A home opening onto the sea.","place.body1":"A pool beneath the pines, a stone boathouse, a wide garden and a private pier leading down to the water. The outdoor spaces are ours for the day.","place.body2":"The garden, boathouse and terrace are open. The pool is available until sunset; the back garden is there when you need a little quiet.","place.stat1":"guests","place.stat2":"workshops and experiences","place.stat3":"hours, boat to boat","place.cta":"See the place",
  "flow.eyebrow":"The day","flow.body":"One boat. Six spaces across the garden. The music shifts at sunset; the route is yours.","flow.step1title":"The crossing","flow.step1body":"Our private boat leaves Karaköy at 12:30 and Kadıköy at 13:00, arriving directly at the house pier. The music starts before the city disappears behind us.","flow.step2title":"Afternoon","flow.step2body":"Workshops open in different corners of the garden. The pool, bar and open studios remain available throughout the day. You set your own route.","flow.step3title":"After sunset","flow.step3body":"As the sun meets the water at 19:05, the table is laid, the lights come on and the music changes direction. The last boat leaves at 00:30.",
  "workshops.eyebrow":"Workshops","workshops.title":"Six spaces. Join as many as you like.","workshops.body":"Each space has its own time and capacity. We collect your choices separately before the event; open a card for the full story.",
- "gallery.eyebrow":"From the grounds",
+ "gallery.house":"The house","gallery.boat":"The boat",
  "hosts.eyebrow":"Hosts","hosts.title":"Each workshop is led by someone who lives their craft.","hosts.body":"Small groups, direct exchange and a corner of the grounds for every practice.","hosts.oguz":"Collective Sound","hosts.seyma":"Fragrance Lab","hosts.bisou":"Style Is Instinct",
  "music.eyebrow":"Music","music.title":"It begins on the boat and rises with the night.","music.body":"Music is not confined to a stage; it moves through the crossing, the garden and the long table.","music.row1":"Boat and arrival","music.silence":"Silence","music.row2":"The garden listens for Collective Sound","music.row3":"Afternoon and golden hour","music.row4":"Long table and the turn into night","music.row5":"Night set and closing","music.note":"At 15:00 the garden falls quiet for one hour. The pause is part of the music too.",
- "tickets.eyebrow":"Tickets","tickets.title":"Choose your ticket, then complete the application.","tickets.body":"Capacity is limited to fifty guests. We reply within 72 hours, together with a secure payment link.","tickets.earlyTag":"Until 8 September","tickets.early":"Early ticket","tickets.perPerson":"per guest","tickets.feature2":"All workshops","tickets.feature3":"Bite foods","tickets.drinks":"House pitcher · alcoholic & non-alcoholic","tickets.feature4":"Pool, garden and pier","tickets.limited":"Limited release","tickets.fullTag":"Standard","tickets.full":"Full ticket","tickets.bar":"Bar cocktails charged separately","tickets.duoTag":"Two guests","tickets.duo":"Duo ticket","tickets.forTwo":"for two","tickets.duo1":"Two full tickets","tickets.duo2":"A separate application for each guest",
+ "tickets.eyebrow":"Tickets","tickets.title":"Choose your ticket, then complete the application.","tickets.body":"Capacity is limited to fifty guests. We reply within 72 hours, together with a secure payment link.","tickets.passTag":"Travel not included","tickets.pass":"Island Pass","tickets.perPerson":"per guest","tickets.boat":"Private return boat","tickets.feature2":"All workshops","tickets.feature3":"Bite foods","tickets.drinks":"House pitcher · alcoholic & non-alcoholic","tickets.feature4":"Pool, garden and pier","tickets.limited":"Limited release","tickets.fullTag":"Boat included","tickets.full":"Full ticket","tickets.bar":"Bar cocktails charged separately",
  "apply.eyebrow":"Application","apply.title":"Have a reference? Name them.","apply.body":"Coming through someone in the collective? Reach out with their name. If this is your first connection, use the short form beside it to introduce yourself.",
  "form.name":"Full name","form.phone":"Phone","form.email":"Email","form.reference":"Reference (if any)","form.party":"Party size","form.solo":"Just me","form.consent":"I have read the house rules and cancellation policy.","form.submit":"Send application",
- "faq.eyebrow":"FAQ","faq.title":"Things you may want to know.","faq.q1":"What is included in the ticket?","faq.a1":"All workshops, Bite foods, alcoholic and non-alcoholic house pitcher drinks, plus access to the pool, garden and pier. Bar cocktails are charged separately.","faq.q2":"What if I miss the boat?","faq.a2":"You can take a public ferry and make your own way to the house, but you will miss the opening and boat experience. Departure times are fixed: Karaköy 12:30, Kadıköy 13:00.","faq.q3":"How do I join a workshop?","faq.a3":"We collect workshop preferences separately after your application is approved and before the event. Limited-capacity spaces are planned around these choices.","faq.q4":"What should I bring?","faq.a4":"Swimwear, a towel and a light layer for the evening. We will take care of the rest.","faq.q5":"Can I bring someone?","faq.a5":"Yes. Each guest must submit a separate application and name the person they are attending with.","faq.q6":"Why is there an application?","faq.a6":"The house holds fifty guests. Applications help us protect the scale and balance of the day.","faq.q7":"What is the cancellation policy?","faq.a7":"Full refunds are available until 8 September. After that date, a ticket may be transferred to someone else with advance notice.",
+ "faq.eyebrow":"FAQ","faq.title":"Things you may want to know.","faq.q1":"What is included in the ticket?","faq.a1":"Both tickets include all workshops, Bite foods, alcoholic and non-alcoholic house pitcher drinks, plus access to the pool, garden and pier. The Full Ticket also includes the private return boat; Island Pass does not include travel. Bar cocktails are charged separately.","faq.q2":"What if I miss the boat?","faq.a2":"You can take a public ferry and make your own way to the house, but you will miss the opening and boat experience. Departure times are fixed: Karaköy 12:30, Kadıköy 13:00.","faq.q3":"How do I join a workshop?","faq.a3":"We collect workshop preferences separately after your application is approved and before the event. Limited-capacity spaces are planned around these choices.","faq.q4":"What should I bring?","faq.a4":"Swimwear, a towel and a light layer for the evening. We will take care of the rest.","faq.q5":"Can I bring someone?","faq.a5":"Yes. Each guest must submit a separate application and name the person they are attending with.","faq.q6":"Why is there an application?","faq.a6":"The house holds fifty guests. Applications help us protect the scale and balance of the day.","faq.q7":"What is the cancellation policy?","faq.a7":"Full refunds are available until 8 September. After that date, a ticket may be transferred to someone else with advance notice.",
  "cta.contact":"Get in touch","footer.about":"We design better ways of coming together. Chapter I: The Crossing, 19 September 2026, Büyükada.","footer.explore":"Explore","footer.collective":"Collective","footer.hosts":"Hosts","footer.day":"The day","footer.date":"Saturday, 19 September 2026","footer.boat":"Boat 12:30 Karaköy · 13:00 Kadıköy","footer.return":"Return 00:30"
 };
 
@@ -585,7 +601,7 @@ document.getElementById('mclose').onclick=closeM;
 modal.onclick=e=>{if(e.target===modal)closeM();};
 
 const lb=document.getElementById('lb'), lbi=document.getElementById('lbimg');
-document.querySelectorAll('#gal img').forEach(im=>im.onclick=()=>{lbi.src=im.src;lb.classList.add('on');document.body.style.overflow='hidden';});
+document.querySelectorAll('.lightbox-gallery img').forEach(im=>im.onclick=()=>{lbi.src=im.src;lb.classList.add('on');document.body.style.overflow='hidden';});
 lb.onclick=()=>{lb.classList.remove('on');document.body.style.overflow='';};
 document.onkeydown=e=>{if(e.key==='Escape'){closeM();lb.classList.remove('on');document.body.style.overflow='';}};
 
