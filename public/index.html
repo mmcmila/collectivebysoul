@@ -94,9 +94,11 @@ nav{position:sticky;top:0;z-index:80;background:rgba(242,234,228,.9);backdrop-fi
 /* method */
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:1.6rem;margin-top:3rem}
 .step img{border-radius:var(--r);width:100%;aspect-ratio:4/5;object-fit:cover;margin-bottom:1.3rem}
+.step:last-child img{filter:brightness(.5) saturate(.78)}
 .step .n{font-family:var(--serif);color:var(--clay);font-size:.95rem}
 .step h3{margin:.3rem 0 .5rem}
 .step p{font-size:.95rem}
+.flow-title{font-size:clamp(2.5rem,6vw,4.8rem);margin:0}
 @media(max-width:860px){.steps{grid-template-columns:1fr}}
 
 /* classes */
@@ -109,19 +111,14 @@ nav{position:sticky;top:0;z-index:80;background:rgba(242,234,228,.9);backdrop-fi
 .card h3{margin-bottom:.15rem}
 .card .host{font-family:var(--serif);color:var(--body);font-size:1rem;margin-bottom:.7rem}
 .card p{font-size:.94rem}
-.freebar{margin-top:1.8rem;background:var(--card);border-radius:var(--r);padding:1.3rem 1.6rem;font-size:.95rem;color:var(--body)}
-.freebar b{color:var(--ink);font-family:var(--serif);font-weight:400}
 @media(max-width:760px){.cards{grid-template-columns:1fr}}
 
 /* benefits */
-.bens{display:grid;grid-template-columns:repeat(3,1fr);gap:.9rem 2.4rem;margin-top:2.2rem}
-.bens div{padding:.9rem 0;border-bottom:1px solid var(--line);font-size:.97rem;color:var(--body)}
-.bens div:before{content:'—';color:var(--clay);margin-right:.7rem}
-.gal{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-top:2.8rem}
+.gal{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-top:1.5rem}
 .gal img{border-radius:14px;width:100%;aspect-ratio:1;object-fit:cover;cursor:zoom-in;transition:transform .5s}
 .gal img:hover{transform:scale(1.03)}
 .gal img:first-child{grid-column:span 2;aspect-ratio:2/1}
-@media(max-width:860px){.bens{grid-template-columns:1fr}.gal{grid-template-columns:repeat(2,1fr)}.gal img:first-child{grid-column:span 2}}
+@media(max-width:860px){.gal{grid-template-columns:repeat(2,1fr)}.gal img:first-child{grid-column:span 2}}
 
 /* people */
 .people{display:grid;grid-template-columns:repeat(3,1fr);gap:1.6rem;margin-top:2.6rem}
@@ -132,11 +129,12 @@ nav{position:sticky;top:0;z-index:80;background:rgba(242,234,228,.9);backdrop-fi
 
 /* music */
 .music{background:var(--deep);color:var(--bg);border-radius:26px;padding:clamp(2.2rem,5vw,4rem)}
-.music .eyebrow{color:var(--gold)}
+.music>.eyebrow{color:var(--gold);font-family:var(--serif);font-size:clamp(3rem,7vw,5.6rem);font-weight:300;line-height:.9;letter-spacing:-.035em;text-transform:none;margin-bottom:2.4rem}
 .music h2{color:var(--bg)}
 .music p{color:rgba(242,234,228,.7)}
 .mrow{display:grid;grid-template-columns:8.5rem 1fr auto;gap:1rem;padding:1.05rem 0;border-bottom:1px solid rgba(242,234,228,.16);align-items:baseline}
 .mrow:first-of-type{border-top:1px solid rgba(242,234,228,.16)}
+.music>.eyebrow+.mrow{border-top:1px solid rgba(242,234,228,.16)}
 .mrow time{font-family:var(--serif);color:var(--gold);font-size:1rem}
 .mrow b{font-family:var(--serif);font-weight:400;font-size:1.2rem}
 .mrow span{font-size:.88rem;color:rgba(242,234,228,.68);text-align:right}
@@ -279,9 +277,8 @@ footer li{padding:.28rem 0;font-size:.92rem}
 <section id="akis">
   <div class="wrap">
     <div class="center" style="max-width:640px">
-      <div class="eyebrow" data-copy="flow.eyebrow">Gün akışı</div>
-      <h2 data-copy="flow.title">Öğleden geceye, tek bir akış.</h2>
-      <p class="lead center" style="margin-top:1rem" data-copy="flow.body">Saatler belli. Geri kalanı sana ait: bir atölyeye katıl, havuza gir, bahçede kal ya da hiçbir şey planlama.</p>
+      <h2 class="flow-title" data-copy="flow.eyebrow">Gün akışı</h2>
+      <p class="lead center" style="margin-top:1rem" data-copy="flow.body">Bir tekne. Bahçeye yayılan altı alan. Gün batımında müzik yön değiştirir; rotayı sen çizersin.</p>
     </div>
     <div class="steps">
       <div class="step">
@@ -290,12 +287,12 @@ footer li{padding:.28rem 0;font-size:.92rem}
         <p data-copy="flow.step1body">Özel tekne 12:30'da Karaköy'den, 13:00'te Kadıköy'den kalkıyor ve doğrudan evin iskelesine yanaşıyor. Müzik daha şehir geride kalmadan başlıyor.</p>
       </div>
       <div class="step">
-        <img src="assets/g1.jpg" alt="Bahçe">
+        <img src="assets/dusk.jpg" alt="Havuz ve deniz manzarası">
         <div class="n">02</div><h3 data-copy="flow.step2title">Öğleden sonra</h3>
         <p data-copy="flow.step2body">Atölyeler bahçenin farklı köşelerinde açılıyor. Havuz, bar ve açık stüdyo gün boyunca yerinde. Kendi rotanı kendin kuruyorsun.</p>
       </div>
       <div class="step">
-        <img src="assets/dusk.jpg" alt="Gün batımı">
+        <img src="assets/boat_night.jpg" alt="Gece denizde tekne">
         <div class="n">03</div><h3 data-copy="flow.step3title">Gün batımından sonra</h3>
         <p data-copy="flow.step3body">Güneş 19:05'te denize inerken masa kuruluyor, ışıklar yanıyor ve müzik yön değiştiriyor. Son tekne 00:30'da.</p>
       </div>
@@ -307,24 +304,14 @@ footer li{padding:.28rem 0;font-size:.92rem}
   <div class="wrap">
     <div class="eyebrow" data-copy="workshops.eyebrow">Atölyeler</div>
     <h2 data-copy="workshops.title">Altı farklı alan. İstediğin kadarına katıl.</h2>
-    <p class="lead" style="margin-top:1rem" data-copy="workshops.body">Bazılarının saati ve sınırlı kontenjanı var; bazıları gün boyunca açık. Detaylar için kartlara dokun.</p>
+    <p class="lead" style="margin-top:1rem" data-copy="workshops.body">Her alanın kendi saati ve kontenjanı var. Katılmak istediklerini başvurunda önceden seç; detaylar için kartlara dokun.</p>
     <div class="cards" id="cards"></div>
-    <div class="freebar" data-copy-html="workshops.free"><b>Gün boyunca:</b> havuz, bar, bahçe ve iskele açık. Kayıt yok, zorunlu rota yok.</div>
   </div>
 </section>
 
 <section id="galeri">
   <div class="wrap">
-    <div class="eyebrow" data-copy="gallery.eyebrow">Yanında kalanlar</div>
-    <h2 data-copy="gallery.title">Günün sonunda birkaç iz.</h2>
-    <div class="bens">
-      <div data-copy="gallery.item1">Kendi ellerinle yaptığın bir şey</div>
-      <div data-copy="gallery.item2">Adını bildiğin yeni yüzler</div>
-      <div data-copy="gallery.item3">Sana ait yeni bir koku</div>
-      <div data-copy="gallery.item4">Ağaçlar arasında kuruyan bir kumaş</div>
-      <div data-copy="gallery.item5">Telefona bakmadan geçen bir gün batımı</div>
-      <div data-copy="gallery.item6">Dönüş yolunda üzerinde kalan deniz tuzu</div>
-    </div>
+    <div class="eyebrow" data-copy="gallery.eyebrow">Mekândan</div>
     <div class="gal" id="gal">
       <img src="assets/g2.jpg" alt="Kayıkhane">
       <img src="assets/g3.jpg" alt="Çim">
@@ -355,8 +342,6 @@ footer li{padding:.28rem 0;font-size:.92rem}
   <div class="wrap">
     <div class="music">
       <div class="eyebrow" data-copy="music.eyebrow">Müzik</div>
-      <h2 data-copy="music.title">Teknede başlar, geceyle birlikte yükselir.</h2>
-      <p class="lead" style="margin-top:1rem;margin-bottom:2.2rem" data-copy="music.body">Müzik ayrı bir sahnede değil; yolculuğun, bahçenin ve masanın içinde.</p>
       <div class="mrow"><time>12:30 — 15:00</time><b>Emre Arısev</b><span data-copy="music.row1">Tekne ve karşılama</span></div>
       <div class="mrow silent"><time>15:00 — 16:15</time><b data-copy="music.silence">Sessizlik</b><span data-copy="music.row2">Kolektif Ses için bahçe dinleniyor</span></div>
       <div class="mrow"><time>16:15 — 19:20</time><b>Mathmem · Görkem Çay</b><span data-copy="music.row3">Öğleden sonra ve altın saat</span></div>
@@ -378,22 +363,22 @@ footer li{padding:.28rem 0;font-size:.92rem}
       <div class="plan">
         <div class="tag" data-copy="tickets.earlyTag">8 Eylül'e kadar</div>
         <h3 data-copy="tickets.early">Erken bilet</h3>
-        <div class="price">6.500 ₺</div><div class="per" data-copy="tickets.perPerson">kişi başı</div>
-        <ul><li data-copy="tickets.feature1">Gidiş dönüş özel tekne</li><li data-copy="tickets.feature2">Tüm atölyeler</li><li data-copy="tickets.feature3">Karşılama ve akşam yemeği</li><li data-copy="tickets.feature4">Havuz, bahçe ve iskele</li><li data-copy="tickets.limited">Sınırlı sayıda</li></ul>
+        <div class="price">5.000 ₺</div><div class="per" data-copy="tickets.perPerson">kişi başı</div>
+        <ul><li data-copy="tickets.feature2">Tüm atölyeler</li><li data-copy="tickets.feature3">Bite foods</li><li data-copy="tickets.drinks">House pitcher · alkollü ve alkolsüz</li><li data-copy="tickets.feature4">Havuz, bahçe ve iskele</li><li data-copy="tickets.limited">Sınırlı sayıda</li></ul>
         <a class="btn btn-line" href="#basvuru" data-copy="nav.apply">Başvur</a>
       </div>
       <div class="plan hot">
         <div class="tag" data-copy="tickets.fullTag">Standart</div>
         <h3 style="color:var(--bg)" data-copy="tickets.full">Tam bilet</h3>
         <div class="price">8.000 ₺</div><div class="per" style="color:rgba(242,234,228,.72)" data-copy="tickets.perPerson">kişi başı</div>
-        <ul><li data-copy="tickets.feature1">Gidiş dönüş özel tekne</li><li data-copy="tickets.feature2">Tüm atölyeler</li><li data-copy="tickets.feature3">Karşılama ve akşam yemeği</li><li data-copy="tickets.feature4">Havuz, bahçe ve iskele</li><li data-copy="tickets.bar">Bar ayrıca</li></ul>
+        <ul><li data-copy="tickets.feature2">Tüm atölyeler</li><li data-copy="tickets.feature3">Bite foods</li><li data-copy="tickets.drinks">House pitcher · alkollü ve alkolsüz</li><li data-copy="tickets.feature4">Havuz, bahçe ve iskele</li><li data-copy="tickets.bar">Bar kokteylleri ayrıca</li></ul>
         <a class="btn btn-fill" href="#basvuru" data-copy="nav.apply">Başvur</a>
       </div>
       <div class="plan">
         <div class="tag" data-copy="tickets.duoTag">İki kişi</div>
         <h3 data-copy="tickets.duo">Çift bilet</h3>
         <div class="price">15.000 ₺</div><div class="per" data-copy="tickets.forTwo">iki kişi</div>
-        <ul><li data-copy="tickets.duo1">İki tam bilet</li><li data-copy="tickets.feature1">Gidiş dönüş özel tekne</li><li data-copy="tickets.feature2">Tüm atölyeler</li><li data-copy="tickets.feature3">Karşılama ve akşam yemeği</li><li data-copy="tickets.duo2">Her iki misafir için ayrı başvuru</li></ul>
+        <ul><li data-copy="tickets.duo1">İki tam bilet</li><li data-copy="tickets.feature2">Tüm atölyeler</li><li data-copy="tickets.feature3">Bite foods</li><li data-copy="tickets.drinks">House pitcher · alkollü ve alkolsüz</li><li data-copy="tickets.duo2">Her iki misafir için ayrı başvuru</li></ul>
         <a class="btn btn-line" href="#basvuru" data-copy="nav.apply">Başvur</a>
       </div>
     </div>
@@ -404,24 +389,23 @@ footer li{padding:.28rem 0;font-size:.92rem}
   <div class="wrap split">
     <div>
       <div class="eyebrow" data-copy="apply.eyebrow">Başvuru</div>
-      <h2 data-copy="apply.title">Üç dakikalık kısa bir form.</h2>
-      <p class="lead" style="margin-top:1rem" data-copy="apply.body">Başvuruları tek tek okuyor ve 72 saat içinde yanıtlıyoruz. Form henüz ödeme almaz; onaylanan başvurulara güvenli ödeme bağlantısı ayrıca gönderilir.</p>
-      <img src="assets/ticket.jpg" alt="Bilet" style="border-radius:var(--r);margin-top:2rem">
+      <h2 data-copy="apply.title">Referansın varsa, adını söyle.</h2>
+      <p class="lead" style="margin-top:1rem" data-copy="apply.body">Topluluğun içinden birinin referansıyla geliyorsan bize onun adıyla ulaş. Henüz bir bağlantın yoksa, yandaki kısa form kendini tanıtman için.</p>
     </div>
     <form id="apply" action="FORM_ENDPOINT" method="POST" style="display:grid;gap:1.1rem">
       <div><label data-copy="form.name" style="font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--clay);display:block;margin-bottom:.4rem">Ad soyad</label><input name="ad" required style="width:100%;padding:.75rem 0;border:0;border-bottom:1px solid var(--line);background:transparent;font-family:var(--sans);font-size:1rem;color:var(--ink);outline:none"></div>
       <div><label data-copy="form.phone" style="font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--clay);display:block;margin-bottom:.4rem">Telefon</label><input name="tel" type="tel" required style="width:100%;padding:.75rem 0;border:0;border-bottom:1px solid var(--line);background:transparent;font-family:var(--sans);font-size:1rem;color:var(--ink);outline:none"></div>
       <div><label data-copy="form.email" style="font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--clay);display:block;margin-bottom:.4rem">E-posta</label><input name="mail" type="email" required style="width:100%;padding:.75rem 0;border:0;border-bottom:1px solid var(--line);background:transparent;font-family:var(--sans);font-size:1rem;color:var(--ink);outline:none"></div>
       <div><label style="font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--clay);display:block;margin-bottom:.4rem">Instagram</label><input name="ig" placeholder="@" style="width:100%;padding:.75rem 0;border:0;border-bottom:1px solid var(--line);background:transparent;font-family:var(--sans);font-size:1rem;color:var(--ink);outline:none"></div>
-      <div><label data-copy="form.q1" style="font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--clay);display:block;margin-bottom:.4rem">Son bir yılda kendi ellerinle ne yaptın?</label><textarea name="q1" maxlength="200" required style="width:100%;padding:.75rem 0;border:0;border-bottom:1px solid var(--line);background:transparent;font-family:var(--sans);font-size:1rem;color:var(--ink);outline:none;min-height:54px;resize:vertical"></textarea><small data-copy="form.q1hint" style="color:var(--body);font-size:.8rem">Bir yemek, bir playlist, bir masa, bir bahçe. Ne olduğu önemli değil.</small></div>
-      <div><label data-copy="form.q2" style="font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--clay);display:block;margin-bottom:.4rem">Bu güne parayla ilgisi olmayan ne katarsın?</label><textarea name="q2" maxlength="200" required style="width:100%;padding:.75rem 0;border:0;border-bottom:1px solid var(--line);background:transparent;font-family:var(--sans);font-size:1rem;color:var(--ink);outline:none;min-height:54px;resize:vertical"></textarea></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.1rem">
-        <div><label data-copy="form.boat" style="font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--clay);display:block;margin-bottom:.4rem">Hangi tekne</label>
-          <select name="tekne" style="width:100%;padding:.75rem 0;border:0;border-bottom:1px solid var(--line);background:transparent;font-family:var(--sans);font-size:1rem;color:var(--ink);outline:none"><option>12:30 · Karaköy</option><option>13:00 · Kadıköy</option></select></div>
-        <div><label data-copy="form.party" style="font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--clay);display:block;margin-bottom:.4rem">Kaç kişi</label>
-          <select name="kisi" style="width:100%;padding:.75rem 0;border:0;border-bottom:1px solid var(--line);background:transparent;font-family:var(--sans);font-size:1rem;color:var(--ink);outline:none"><option data-copy="form.solo">Tek başıma</option><option>+1</option><option>+2</option></select></div>
-      </div>
-      <label style="display:flex;gap:.7rem;align-items:flex-start;font-size:.9rem;color:var(--body);margin-top:.4rem"><input type="checkbox" required style="margin-top:.35rem"><span data-copy="form.consent">Tekne saatlerini, mekân kurallarını ve iptal koşullarını okudum.</span></label>
+      <div><label data-copy="form.reference" style="font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--clay);display:block;margin-bottom:.4rem">Referansın (varsa)</label><input name="referans" style="width:100%;padding:.75rem 0;border:0;border-bottom:1px solid var(--line);background:transparent;font-family:var(--sans);font-size:1rem;color:var(--ink);outline:none"></div>
+      <div><label data-copy="form.party" style="font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--clay);display:block;margin-bottom:.4rem">Kaç kişi</label>
+        <select name="kisi" style="width:100%;padding:.75rem 0;border:0;border-bottom:1px solid var(--line);background:transparent;font-family:var(--sans);font-size:1rem;color:var(--ink);outline:none"><option data-copy="form.solo">Tek başıma</option><option>+1</option><option>+2</option></select></div>
+      <fieldset style="border:0;padding:.3rem 0;margin:0"><legend data-copy="form.workshops" style="font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--clay);margin-bottom:.7rem">Katılmak istediğin atölyeler</legend>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.65rem 1rem;font-size:.9rem;color:var(--body)">
+          <label><input type="checkbox" name="atolye" value="collective-sound"> Collective Sound</label><label><input type="checkbox" name="atolye" value="fragrance-lab"> Fragrance Lab</label><label><input type="checkbox" name="atolye" value="style-instinct"> Style Is Instinct</label><label><input type="checkbox" name="atolye" value="fortune-dome"> Fortune Dome</label><label><input type="checkbox" name="atolye" value="natural-dyeing"> Natural Dyeing</label><label><input type="checkbox" name="atolye" value="free-painting"> Free Painting</label>
+        </div>
+      </fieldset>
+      <label style="display:flex;gap:.7rem;align-items:flex-start;font-size:.9rem;color:var(--body);margin-top:.4rem"><input type="checkbox" required style="margin-top:.35rem"><span data-copy="form.consent">Mekân kurallarını ve iptal koşullarını okudum.</span></label>
       <button class="btn btn-fill" type="submit" style="justify-content:center" data-copy="form.submit">Başvuruyu gönder</button>
     </form>
   </div>
@@ -432,9 +416,9 @@ footer li{padding:.28rem 0;font-size:.92rem}
     <div class="eyebrow" data-copy="faq.eyebrow">Sık sorulanlar</div>
     <h2 data-copy="faq.title">Bilmek isteyebileceklerin.</h2>
     <div class="faq" style="margin-top:2rem">
-      <details><summary data-copy="faq.q1">Bilete neler dahil?</summary><p data-copy="faq.a1">Karaköy veya Kadıköy'den gidiş dönüş özel tekne, tüm atölyeler, karşılama ikramları ve akşam yemeği. Bar ayrıca işletiliyor.</p></details>
+      <details><summary data-copy="faq.q1">Bilete neler dahil?</summary><p data-copy="faq.a1">Tüm atölyeler, Bite foods, alkollü ve alkolsüz house pitcher içecekler; havuz, bahçe ve iskele kullanımı. Bar kokteylleri ayrıca.</p></details>
       <details><summary data-copy="faq.q2">Tekneyi kaçırırsam ne olur?</summary><p data-copy="faq.a2">Vapurla gelip mekâna kendi imkânınla ulaşabilirsin; ancak açılışı ve tekne deneyimini kaçırırsın. Kalkış saatleri kesin: Karaköy 12:30, Kadıköy 13:00.</p></details>
-      <details><summary data-copy="faq.q3">Atölyelere nasıl katılıyorum?</summary><p data-copy="faq.a3">Sınırlı kontenjanlı atölyeler için gün içinde yerinde kayıt alınır. Natural Dyeing ve Free Painting gün boyunca açıktır.</p></details>
+      <details><summary data-copy="faq.q3">Atölyelere nasıl katılıyorum?</summary><p data-copy="faq.a3">Katılmak istediğin atölyeleri başvuru formunda önceden seçmen gerekiyor. Kontenjanı sınırlı alanları bu tercihlere göre planlıyoruz.</p></details>
       <details><summary data-copy="faq.q4">Ne getirmeliyim?</summary><p data-copy="faq.a4">Mayo, havlu ve akşam serinliği için ince bir katman. Geri kalanı biz hazırlıyoruz.</p></details>
       <details><summary data-copy="faq.q5">Yanımda birini getirebilir miyim?</summary><p data-copy="faq.a5">Evet. Her misafirin ayrı başvuru doldurması ve formda birlikte geldiği kişiyi belirtmesi gerekir.</p></details>
       <details><summary data-copy="faq.q6">Neden başvuru alıyorsunuz?</summary><p data-copy="faq.a6">Mekânın kapasitesi elli kişi. Başvurular, günün ölçeğini ve dengeli akışını korumamıza yardımcı oluyor.</p></details>
@@ -448,8 +432,7 @@ footer li{padding:.28rem 0;font-size:.92rem}
     <img src="assets/dusk.jpg" alt="Gün batımı">
     <div class="in">
       <div class="eyebrow">19 Eylül 2026</div>
-      <h2 data-copy="cta.title">19 Eylül'de adaya geçiyoruz.</h2>
-      <p data-copy="cta.body">Elli kişilik yer var. Son tekne 00:30'da dönüyor.</p>
+      <h2 data-copy="cta.title">Adada görüşürüz.</h2>
       <a class="btn" href="#basvuru" data-copy="nav.apply">Başvur</a>
     </div>
   </div>
@@ -542,16 +525,16 @@ const EN={
  "intro.eyebrow":"Why we are here","intro.title":"Come to take part, not to watch.","intro.body":"One Day on an Island is not a programme observed from a distance. It is a day to join at your own pace, make something and share a table with people you have just met.",
  "intro.item1":"Make contact with something real","intro.item2":"Find yourself in a new conversation","intro.item3":"Try the thing you have kept postponing","intro.item4":"Forget your phone for a few hours","intro.item5":"Step outside the city's tempo","intro.item6":"Leave with a story of your own",
  "place.eyebrow":"The place","place.title":"A home opening onto the sea.","place.body1":"A pool beneath the pines, a stone boathouse, a wide garden and a private pier leading down to the water. The outdoor spaces are ours for the day.","place.body2":"The garden, boathouse and terrace are open. The pool is available until sunset; the back garden is there when you need a little quiet.","place.stat1":"guests","place.stat2":"workshops and experiences","place.stat3":"hours, boat to boat","place.cta":"See the place",
- "flow.eyebrow":"The day","flow.title":"One continuous arc, from afternoon into night.","flow.body":"The hours are set. The rest is yours: join a workshop, swim, stay in the garden or make no plan at all.","flow.step1title":"The crossing","flow.step1body":"Our private boat leaves Karaköy at 12:30 and Kadıköy at 13:00, arriving directly at the house pier. The music starts before the city disappears behind us.","flow.step2title":"Afternoon","flow.step2body":"Workshops open in different corners of the garden. The pool, bar and open studios remain available throughout the day. You set your own route.","flow.step3title":"After sunset","flow.step3body":"As the sun meets the water at 19:05, the table is laid, the lights come on and the music changes direction. The last boat leaves at 00:30.",
- "workshops.eyebrow":"Workshops","workshops.title":"Six spaces. Join as many as you like.","workshops.body":"Some have set times and limited capacity; others stay open all day. Open a card for the full story.","workshops.free":"<b>All day:</b> the pool, bar, garden and pier are open. No sign-up, no prescribed route.",
- "gallery.eyebrow":"What stays with you","gallery.title":"A few traces at the end of the day.","gallery.item1":"Something made with your own hands","gallery.item2":"New faces whose names you know","gallery.item3":"A scent that belongs to you","gallery.item4":"Fabric drying between the trees","gallery.item5":"A sunset spent away from your screen","gallery.item6":"Sea salt still on your skin for the ride home",
+ "flow.eyebrow":"The day","flow.body":"One boat. Six spaces across the garden. The music shifts at sunset; the route is yours.","flow.step1title":"The crossing","flow.step1body":"Our private boat leaves Karaköy at 12:30 and Kadıköy at 13:00, arriving directly at the house pier. The music starts before the city disappears behind us.","flow.step2title":"Afternoon","flow.step2body":"Workshops open in different corners of the garden. The pool, bar and open studios remain available throughout the day. You set your own route.","flow.step3title":"After sunset","flow.step3body":"As the sun meets the water at 19:05, the table is laid, the lights come on and the music changes direction. The last boat leaves at 00:30.",
+ "workshops.eyebrow":"Workshops","workshops.title":"Six spaces. Join as many as you like.","workshops.body":"Each space has its own time and capacity. Choose the ones you want when you apply; open a card for the full story.",
+ "gallery.eyebrow":"From the grounds",
  "hosts.eyebrow":"Hosts","hosts.title":"Each workshop is led by someone who lives their craft.","hosts.body":"Small groups, direct exchange and a corner of the grounds for every practice.","hosts.oguz":"Collective Sound","hosts.seyma":"Fragrance Lab","hosts.bisou":"Style Is Instinct",
  "music.eyebrow":"Music","music.title":"It begins on the boat and rises with the night.","music.body":"Music is not confined to a stage; it moves through the crossing, the garden and the long table.","music.row1":"Boat and arrival","music.silence":"Silence","music.row2":"The garden listens for Collective Sound","music.row3":"Afternoon and golden hour","music.row4":"Long table and the turn into night","music.row5":"Night set and closing","music.note":"At 15:00 the garden falls quiet for one hour. The pause is part of the music too.",
- "tickets.eyebrow":"Tickets","tickets.title":"Choose your ticket, then complete the application.","tickets.body":"Capacity is limited to fifty guests. We reply within 72 hours, together with a secure payment link.","tickets.earlyTag":"Until 8 September","tickets.early":"Early ticket","tickets.perPerson":"per guest","tickets.feature1":"Private return boat","tickets.feature2":"All workshops","tickets.feature3":"Welcome bites and dinner","tickets.feature4":"Pool, garden and pier","tickets.limited":"Limited release","tickets.fullTag":"Standard","tickets.full":"Full ticket","tickets.bar":"Bar charged separately","tickets.duoTag":"Two guests","tickets.duo":"Duo ticket","tickets.forTwo":"for two","tickets.duo1":"Two full tickets","tickets.duo2":"A separate application for each guest",
- "apply.eyebrow":"Application","apply.title":"A short, three-minute form.","apply.body":"We read every application and reply within 72 hours. The form does not take payment; approved guests receive a secure payment link separately.",
- "form.name":"Full name","form.phone":"Phone","form.email":"Email","form.q1":"What have you made with your own hands in the past year?","form.q1hint":"A meal, a playlist, a table, a garden. What it was does not matter.","form.q2":"What would you bring to this day that money cannot buy?","form.boat":"Which boat","form.party":"Party size","form.solo":"Just me","form.consent":"I have read the boat times, house rules and cancellation policy.","form.submit":"Send application",
- "faq.eyebrow":"FAQ","faq.title":"Things you may want to know.","faq.q1":"What is included in the ticket?","faq.a1":"A private return boat from Karaköy or Kadıköy, all workshops, welcome bites and dinner. The bar is charged separately.","faq.q2":"What if I miss the boat?","faq.a2":"You can take a public ferry and make your own way to the house, but you will miss the opening and boat experience. Departure times are fixed: Karaköy 12:30, Kadıköy 13:00.","faq.q3":"How do I join a workshop?","faq.a3":"Limited-capacity workshops take sign-ups on site during the day. Natural Dyeing and Free Painting remain open throughout.","faq.q4":"What should I bring?","faq.a4":"Swimwear, a towel and a light layer for the evening. We will take care of the rest.","faq.q5":"Can I bring someone?","faq.a5":"Yes. Each guest must submit a separate application and name the person they are attending with.","faq.q6":"Why is there an application?","faq.a6":"The house holds fifty guests. Applications help us protect the scale and balance of the day.","faq.q7":"What is the cancellation policy?","faq.a7":"Full refunds are available until 8 September. After that date, a ticket may be transferred to someone else with advance notice.",
- "cta.title":"We cross to the island on 19 September.","cta.body":"There is room for fifty. The last boat returns at 00:30.","footer.about":"We design better ways of coming together. Chapter I: The Crossing, 19 September 2026, Büyükada.","footer.explore":"Explore","footer.collective":"Collective","footer.hosts":"Hosts","footer.day":"The day","footer.date":"Saturday, 19 September 2026","footer.boat":"Boat 12:30 Karaköy · 13:00 Kadıköy","footer.return":"Return 00:30"
+ "tickets.eyebrow":"Tickets","tickets.title":"Choose your ticket, then complete the application.","tickets.body":"Capacity is limited to fifty guests. We reply within 72 hours, together with a secure payment link.","tickets.earlyTag":"Until 8 September","tickets.early":"Early ticket","tickets.perPerson":"per guest","tickets.feature2":"All workshops","tickets.feature3":"Bite foods","tickets.drinks":"House pitcher · alcoholic & non-alcoholic","tickets.feature4":"Pool, garden and pier","tickets.limited":"Limited release","tickets.fullTag":"Standard","tickets.full":"Full ticket","tickets.bar":"Bar cocktails charged separately","tickets.duoTag":"Two guests","tickets.duo":"Duo ticket","tickets.forTwo":"for two","tickets.duo1":"Two full tickets","tickets.duo2":"A separate application for each guest",
+ "apply.eyebrow":"Application","apply.title":"Have a reference? Name them.","apply.body":"Coming through someone in the collective? Reach out with their name. If this is your first connection, use the short form beside it to introduce yourself.",
+ "form.name":"Full name","form.phone":"Phone","form.email":"Email","form.reference":"Reference (if any)","form.party":"Party size","form.solo":"Just me","form.workshops":"Workshops you want to join","form.consent":"I have read the house rules and cancellation policy.","form.submit":"Send application",
+ "faq.eyebrow":"FAQ","faq.title":"Things you may want to know.","faq.q1":"What is included in the ticket?","faq.a1":"All workshops, Bite foods, alcoholic and non-alcoholic house pitcher drinks, plus access to the pool, garden and pier. Bar cocktails are charged separately.","faq.q2":"What if I miss the boat?","faq.a2":"You can take a public ferry and make your own way to the house, but you will miss the opening and boat experience. Departure times are fixed: Karaköy 12:30, Kadıköy 13:00.","faq.q3":"How do I join a workshop?","faq.a3":"Choose the workshops you want in advance on the application form. We plan limited-capacity spaces around these selections.","faq.q4":"What should I bring?","faq.a4":"Swimwear, a towel and a light layer for the evening. We will take care of the rest.","faq.q5":"Can I bring someone?","faq.a5":"Yes. Each guest must submit a separate application and name the person they are attending with.","faq.q6":"Why is there an application?","faq.a6":"The house holds fifty guests. Applications help us protect the scale and balance of the day.","faq.q7":"What is the cancellation policy?","faq.a7":"Full refunds are available until 8 September. After that date, a ticket may be transferred to someone else with advance notice.",
+ "cta.title":"See you on the island.","footer.about":"We design better ways of coming together. Chapter I: The Crossing, 19 September 2026, Büyükada.","footer.explore":"Explore","footer.collective":"Collective","footer.hosts":"Hosts","footer.day":"The day","footer.date":"Saturday, 19 September 2026","footer.boat":"Boat 12:30 Karaköy · 13:00 Kadıköy","footer.return":"Return 00:30"
 };
 
 const TR={};
@@ -615,6 +598,8 @@ const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.targ
 document.querySelectorAll('.rev').forEach(el=>io.observe(el));
 
 document.getElementById('apply').addEventListener('submit',function(e){
+ if(!this.querySelector('input[name="atolye"]:checked')){e.preventDefault();
+  alert(currentLang==='en'?'Choose at least one workshop before sending your application.':'Başvurunu göndermeden önce en az bir atölye seç.');return;}
  if(this.getAttribute('action')==='FORM_ENDPOINT'){e.preventDefault();
   alert(currentLang==='en'?'The form is not connected to a service yet.\n\nReplace FORM_ENDPOINT in index.html with a Formspree, Tally or Google Forms endpoint.':'Form henüz bir servise bağlı değil.\n\nFormspree, Tally veya Google Forms adresini index.html içindeki FORM_ENDPOINT yazan yere yapıştır.');}
 });
