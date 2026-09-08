@@ -1,0 +1,11 @@
+.DS_Store
+AGENTS.md
+CLAUDE.md
+README.md
+docs/
+public/.DS_Store
+public/*.jpg
+public/*.jpeg
+public/*.png
+public/images/
+public/assets/*.jpg
