@@ -216,19 +216,20 @@ Kalabalık bir sahne yerine küçük gruplar ve doğrudan temas istedik. Atölye
 ### Music
 
 **Eyebrow / display title**
-Teknede başlar. Geceye kalır.
+16:30–00:00
 
-**Body**
-Burada müzik tek bir sahneye ait değil. Yolculuğa eşlik ediyor, Kolektif Ses için bir saat susuyor, uzun masayla yön değiştiriyor.
+**Headline**
+Müzik
 
-- 12:30–15:00 · Emre Arısev · Tekne ve karşılama
-- 15:00–16:15 · Sessizlik · Bahçe Kolektif Ses’i dinliyor
-- 16:15–19:20 · Mathmem · Görkem Çay · Öğleden sonra ve altın saat
-- 19:20–22:30 · Tugen · Uzun masa ve geceye geçiş
-- 22:30–00:30 · Özlem Atalay · Gece seti ve kapanış
+**Status**
+Line-up TBA
 
-**Note**
-15:00’te müzik duruyor. O bir saat boşluk değil; günün parçası.
+**DJ'ler · A–Z**
+
+- Emre Arısev
+- Manthem
+- Özlem Atalay
+- Tugen
 
 ### Tickets
 
@@ -573,19 +574,20 @@ We chose small groups and direct exchange over a crowded stage. The people who s
 ### Music
 
 **Eyebrow / display title**
-It starts on the boat. It stays into the night.
+16:30–00:00
 
-**Body**
-Music does not belong to a single stage here. It travels with us, falls silent for Collective Sound and changes direction around the long table.
+**Headline**
+Music
 
-- 12:30–15:00 · Emre Arısev · Boat and arrival
-- 15:00–16:15 · Silence · The garden listens for Collective Sound
-- 16:15–19:20 · Mathmem · Görkem Çay · Afternoon and golden hour
-- 19:20–22:30 · Tugen · Long table and the turn into night
-- 22:30–00:30 · Özlem Atalay · Night set and close
+**Status**
+Line-up TBA
 
-**Note**
-At 15:00 the music stops. That hour is not a gap; it is part of the day.
+**DJs · A–Z**
+
+- Emre Arısev
+- Manthem
+- Özlem Atalay
+- Tugen
 
 ### Tickets
 
