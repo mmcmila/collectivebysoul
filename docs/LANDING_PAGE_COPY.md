@@ -33,7 +33,7 @@ One Day on an Island · Chapter I: The Crossing · 19 Eylül 2026 · Büyükada
 - Mekân
 - Atölyeler
 - Müzik
-- Biletler
+- Bilet
 - Sık sorulanlar
 - Primary action: Başvur
 
@@ -233,43 +233,35 @@ Burada müzik tek bir sahneye ait değil. Yolculuğa eşlik ediyor, Kolektif Ses
 ### Tickets
 
 **Eyebrow**
-Biletler
+19 Eylül 2026
 
 **Headline**
-Tek fark, adaya nasıl geldiğin.
+Bilet
 
 **Body**
-İki bilet de evdeki aynı programa erişim sağlıyor. Özel tekneyle bizimle gelmek istersen The Crossing Pass’i; ulaşımını kendin ayarlayacaksan Island Pass’i seç.
+Tekne yolculuğundan gece dönüşüne kadar günün tamamı tek bilete dahil.
 
-#### Island Pass — 5.000 ₺
-
-**Label**
-Ulaşım sana ait
-
-**Specific inclusion**
-Etkinlik alanına kendi imkânınla ulaşım
-
-**CTA**
-Island Pass için başvur
-
-#### The Crossing Pass — 8.000 ₺
+#### The Crossing Pass
 
 **Label**
-Özel tekne dahil
+Günün tamamı dahil
 
-**Specific inclusion**
-Karaköy veya Kadıköy’den gidiş ve 00:30’da dönüş
+**Intro**
+Karaköy ya da Kadıköy’den birlikte çıkıyor, doğrudan evin iskelesine varıyor ve gece aynı teknede dönüyoruz.
 
 **CTA**
-Crossing Pass için başvur
+Katıl
 
-#### Both tickets include
+#### Biletine dahil
 
-- Tüm atölyeler ve malzemeler [teyit edin]
-- Bite Foods tarafından hazırlanan yemek/ikram [formatı netleştirin]
+- Karaköy veya Kadıköy’den özel tekneyle gidiş
+- 00:30’da özel tekneyle dönüş
+- Tüm atölyelere erişim
+- Bite Foods tarafından hazırlanan ikramlar
 - Alkollü ve alkolsüz ortak servis içecekleri
 - Havuz, bahçe, kayıkhane ve iskele kullanımı
-- Bar menüsündeki kokteyller ayrıca ücretlidir
+
+Bar menüsündeki kokteyller bilete dahil değildir.
 
 ### Application
 
@@ -314,13 +306,10 @@ Sık sorulanlar
 Gelmeden önce bilmen gerekenler.
 
 **Bilete tam olarak neler dahil?**
-Her iki bilet de tüm atölyelere, [yemek formatını ekleyin], alkollü ve alkolsüz ortak servis içeceklerine; havuz, bahçe, kayıkhane ve iskele kullanımına erişim sağlar. The Crossing Pass ayrıca özel tekneyle gidiş dönüşü içerir. Bar menüsündeki kokteyller ayrıca ücretlidir.
+The Crossing Pass; Karaköy veya Kadıköy’den özel tekneyle gidiş ve 00:30’da dönüşün yanı sıra tüm atölyeleri, Bite Foods ikramlarını, ortak servis içeceklerini ve evin açık alanlarının kullanımını içerir. Bar menüsündeki kokteyller bilete dahil değildir.
 
 **Tekneyi kaçırırsam ne olur?**
 Vapurla Büyükada’ya gelip eve kendi imkânınla ulaşabilirsin; ancak açılışı ve tekne deneyimini kaçırmış olursun. Kalkış saatleri kesin: Karaköy 12:30, Kadıköy 13:00.
-
-**Island Pass ile eve nasıl ulaşırım?**
-[Public ferry terminal–venue transfer details must be added here. If the exact address remains private, explain when approved guests receive it.]
 
 **Atölyelere nasıl kaydolacağım?**
 Başvurun onaylandıktan sonra senden atölye tercihlerini isteyeceğiz. Kontenjanı sınırlı oturumları bu tercihlere göre planlayacağız. Açık stüdyolara gün içinde kayıt olmadan uğrayabilirsin.
@@ -601,43 +590,35 @@ At 15:00 the music stops. That hour is not a gap; it is part of the day.
 ### Tickets
 
 **Eyebrow**
-Tickets
+19 September 2026
 
 **Headline**
-The only difference is how you reach the island.
+Ticket
 
 **Body**
-Both tickets give you the same experience at the house. Choose The Crossing Pass to travel with us on the private boat, or Island Pass if you prefer to make your own way there.
+From the boat journey to the late-night return, the full day is included in one ticket.
 
-#### Island Pass — TRY 5,000
-
-**Label**
-Travel not included
-
-**Specific inclusion**
-Make your own way to the event
-
-**CTA**
-Apply for Island Pass
-
-#### The Crossing Pass — TRY 8,000
+#### The Crossing Pass
 
 **Label**
-Private boat included
+The full day included
 
-**Specific inclusion**
-Outbound from Karaköy or Kadıköy and return at 00:30
+**Intro**
+We leave together from Karaköy or Kadıköy, arrive directly at the house pier and return on the same boat after midnight.
 
 **CTA**
-Apply for The Crossing Pass
+Join
 
-#### Both tickets include
+#### Your ticket includes
 
-- All workshops and materials [confirm]
-- Food prepared by Bite Foods [describe the service format]
+- Private boat outbound from Karaköy or Kadıköy
+- Private boat return at 00:30
+- Access to all workshops
+- Food prepared by Bite Foods
 - Shared alcoholic and non-alcoholic drinks
 - Access to the pool, garden, boathouse and pier
-- Cocktails from the bar menu are charged separately
+
+Cocktails from the bar menu are not included.
 
 ### Application
 
@@ -682,13 +663,10 @@ FAQ
 What to know before you come.
 
 **What exactly is included?**
-Both tickets include all workshops, [add the food format], shared alcoholic and non-alcoholic drinks, plus access to the pool, garden, boathouse and pier. The Crossing Pass also includes the private return boat. Cocktails from the bar menu are charged separately.
+The Crossing Pass includes the private boat from Karaköy or Kadıköy and the 00:30 return, plus all workshops, food by Bite Foods, shared drinks and access to the house’s outdoor spaces. Cocktails from the bar menu are not included.
 
 **What if I miss the boat?**
 You can take a public ferry to Büyükada and make your own way to the house, but you will miss the opening and the boat experience. Departure times are fixed: 12:30 from Karaköy and 13:00 from Kadıköy.
-
-**How do I reach the house with an Island Pass?**
-[Add public ferry terminal–venue transfer details here. If the exact address remains private, explain when approved guests receive it.]
 
 **How do I reserve workshop places?**
 After your application is approved, we will ask for your workshop preferences. We will plan limited-capacity sessions around those choices. You can enter the open studios at any point during the day without a reservation.

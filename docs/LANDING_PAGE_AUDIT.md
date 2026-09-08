@@ -89,16 +89,9 @@ Recommended order:
 
 This avoids asking people to cross the full gallery and host section before they can compare tickets.
 
-### 9. Make tickets easier to compare
+### 9. Present one ticket clearly
 
-The two cards repeat almost every line. Lead with the difference:
-
-- Island Pass: you arrange your own transport.
-- The Crossing Pass: the private return boat is included.
-
-Then place shared inclusions once below both cards. “Bite foods” and “house pitcher” are insider terms; define them in normal language or name the food partner and describe the serving format. State whether VAT, service, workshop materials, towels and any dinner/long-table meal are included.
-
-Do not use “Sınırlı sayıda” as a feature. Capacity is already stated above and the phrase reads like generic urgency.
+The site now offers one ticket only: The Crossing Pass. Keep the price off the landing page, make the private outbound and return boat explicit, and show every inclusion once in the same card. Name the food partner and serving format in plain language. Avoid generic urgency language.
 
 ### 10. Explain the application without making people audition
 
@@ -148,9 +141,8 @@ The right voice for One Day on an Island is smaller, closer and more concrete: �
 ## Questions to settle before final implementation
 
 1. Is the application an open capacity check, or is the guest list curated? What would cause an application to be declined?
-2. Does “Bite foods” mean continuous snacks, one meal, or the long-table dinner?
+2. What exactly do the Bite Foods refreshments include?
 3. Are all workshop materials included, and can one person realistically attend every timed workshop?
-4. Is the Island Pass guest responsible only for getting to Büyükada, or also for transport from the public ferry terminal to the house?
-5. Are the house rules and cancellation terms already written and linkable?
-6. Is `Chapter II` real and announced? If not, remove the dead footer link.
-7. Should the venue’s exact address remain private until approval? If so, say that explicitly in the FAQ.
+4. Are the house rules and cancellation terms already written and linkable?
+5. Is `Chapter II` real and announced? If not, remove the dead footer link.
+6. Should the venue’s exact address remain private until approval? If so, say that explicitly in the FAQ.
