@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Project overview
 
-This repository is a Next.js App Router frontend for Collective by Soul, currently recreating the Yogagrove reference. Keep the implementation simple: reusable components, content arrays, and focused CSS. There is no database, authentication, checkout, or booking backend.
+This repository is a Next.js App Router frontend for Collective by Soul, presenting One Day on an Island in the original Yogagrove-inspired layout. Keep the implementation simple: reusable components, content arrays, and focused CSS. There is no database, authentication, checkout, or booking backend.
 
 ## Package manager
 
@@ -24,7 +24,7 @@ This repository is a Next.js App Router frontend for Collective by Soul, current
 
 - Read the relevant bundled Next.js documentation before changing framework code, as required above.
 - Keep `app/page.tsx` and `app/layout.tsx` as Server Components. Interactive state and Motion belong in client components.
-- Page content and interactions currently live in `components/yoga-grove.tsx`; styling lives in `app/globals.css`.
+- Page sections and interactions live in `components/yoga-grove.tsx`; bilingual copy and workshop data live in `components/event-content.ts`; styling lives in `app/globals.css`.
 - Reuse the existing shadcn components in `components/ui/`. This project uses Base UI, so check its APIs instead of assuming Radix `asChild` patterns.
 - Use `next/image` with descriptive alt text and responsive sizes. Keep Poppins self-hosted through `next/font/local`.
 - Preserve the warm cream and forest-green palette, readable contrast, responsive layout, and reduced-motion behavior.

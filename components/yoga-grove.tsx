@@ -1,7 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type FormEvent,
+} from "react";
 import {
   motion,
   MotionConfig,
@@ -13,19 +19,9 @@ import {
 import {
   ArrowRight,
   ArrowUpRight,
-  BatteryLow,
   Check,
-  CloudRain,
-  Flower2,
-  Heart,
-  Leaf,
   Menu,
-  Moon,
-  MoveUpRight,
-  PersonStanding,
-  Sofa,
-  Sparkles,
-  Sun,
+  Palette,
   Users,
   Wind,
   X,
@@ -40,133 +36,44 @@ import {
 } from "@/components/ui/accordion";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { copy, workshops } from "@/components/event-content";
 
-const classes = [
-  {
-    name: "Vinyasa Flow",
-    image: "vinyasa.jpg",
-    frequency: "5x weekly",
-    duration: "60 min",
-    description:
-      "Move with the breath through a flowing, energising sequence that builds heat, strength and focus.",
-  },
-  {
-    name: "Gentle Hatha",
-    image: "hatha.jpg",
-    frequency: "4x weekly",
-    duration: "60 min",
-    description:
-      "Slow, foundational poses with mindful alignment — perfect for beginners and quiet mornings.",
-  },
-  {
-    name: "Deep Yin",
-    image: "yin.jpg",
-    frequency: "3x weekly",
-    duration: "75 min",
-    description:
-      "Long, supported holds that release deep tension in the hips, spine and connective tissue.",
-  },
-  {
-    name: "Restore & Rest",
-    image: "rest.jpg",
-    frequency: "3x weekly",
-    duration: "75 min",
-    description:
-      "Surrender into stillness with soft, supported shapes that calm the nervous system.",
-  },
-];
-const methods = [
-  {
-    name: "Breathe",
-    image: "breathe.jpg",
-    description:
-      "We begin with breath and nervous-system regulation — the fastest way out of stress and into the present moment.",
-  },
-  {
-    name: "Move",
-    image: "move.jpg",
-    description:
-      "Slow, deliberate strength and mobility that builds real stability in the body — steady, never strained.",
-  },
-  {
-    name: "Restore",
-    image: "restore.jpg",
-    description:
-      "Long, supported poses and deep rest, so everything you practised has the time to settle and truly integrate.",
-  },
-];
-const faqs = [
+type Language = keyof typeof copy;
+type CopyKey = keyof typeof copy.en;
+const navigation = [
+  ["day", "gun"],
+  ["place", "mekan"],
+  ["workshops", "atolyeler"],
+  ["music", "muzik"],
+  ["tickets", "biletler"],
+  ["faq", "sss"],
+] as const;
+const gallery = [
   [
-    "Who are your classes for?",
-    "Everyone — complete beginners, busy parents, people returning after a break, and seasoned practitioners. Every class is small and adapted to who is in the room.",
+    "web/house-1.webp",
+    "Gün batımında havuz ve bahçe",
+    "Pool and garden at sunset",
+  ],
+  ["web/house-5.webp", "Taş kayıkhane ve iskele", "Stone boathouse and pier"],
+  [
+    "web/house-3.webp",
+    "Palmiye ağaçları önünde havuz",
+    "Pool beneath the palm trees",
   ],
   [
-    "Do I need any experience or flexibility?",
-    "Not at all. You don’t need to touch your toes or know any poses. Your teacher will offer options so you can move at your own pace.",
+    "web/boat.webp",
+    "Adaya giden özel teknenin ön güvertesi",
+    "Bow of the private boat to the island",
   ],
-  [
-    "What should I bring to my first class?",
-    "Wear something comfortable and bring a water bottle. Mats, blocks, blankets and all the props you need are provided. Arrive a little early to settle in.",
-  ],
-  [
-    "Can I practise online?",
-    "Yes. Our practice is designed to meet you at home, too. Contact the studio for current livestream classes and access to the online library.",
-  ],
-  [
-    "What is your cancellation policy?",
-    "Memberships have no long contracts and you can cancel at any time. Contact the studio for class cancellation windows before booking.",
-  ],
-  [
-    "Do you offer private or prenatal sessions?",
-    "Yes, we offer personal sessions and gentle prenatal practice. Reach out to the studio so we can find the right teacher and a time that works for you.",
-  ],
-];
-const plans = [
-  {
-    name: "Drop-in",
-    subtitle: "Perfect for trying us out",
-    price: "22",
-    unit: "class",
-    features: [
-      "Any single class",
-      "All levels welcome",
-      "Book online in seconds",
-      "Mat & props included",
-      "No commitment",
-    ],
-  },
-  {
-    name: "Membership",
-    subtitle: "Our most popular",
-    price: "95",
-    unit: "month",
-    features: [
-      "Unlimited studio classes",
-      "Free online class library",
-      "Priority class booking",
-      "Bring-a-friend passes",
-      "Cancel any time",
-    ],
-  },
-  {
-    name: "Class Pack",
-    subtitle: "Flexible & great value",
-    price: "180",
-    unit: "10 classes",
-    features: [
-      "Ten classes, use anytime",
-      "Valid for four months",
-      "All levels welcome",
-      "Online or in-person",
-      "Share with a friend",
-    ],
-  },
+  ["web/boat_night.webp", "Gece dönüş teknesi", "The return boat at night"],
 ];
 
 function Reveal({
@@ -217,7 +124,7 @@ function Photo({
   return (
     <div className={cn("photo", className)}>
       <Image
-        src={`/images/${file}`}
+        src={`/assets/${file}`}
         alt={alt}
         fill
         sizes={
@@ -232,43 +139,47 @@ function Photo({
 }
 function Brand() {
   return (
-    <a href="#home" className="brand" aria-label="Yogagrove home">
-      <Flower2 aria-hidden="true" strokeWidth={1.4} />
-      <span>Yogagrove</span>
+    <a href="#top" className="brand" aria-label="Soul Collective">
+      <Image
+        src="/assets/mark.svg"
+        alt=""
+        width={29}
+        height={33}
+        className="brand-mark"
+      />
+      <span>Soul Collective</span>
     </a>
   );
 }
-function Action({
-  children = "Book a class",
-  onClick,
+function Join({
+  children,
   light = false,
 }: {
-  children?: ReactNode;
-  onClick: () => void;
+  children: ReactNode;
   light?: boolean;
 }) {
   return (
-    <Button
-      variant={light ? "secondary" : "default"}
-      size="lg"
-      onClick={onClick}
+    <a
+      href="#basvuru"
+      className={buttonVariants({
+        variant: light ? "secondary" : "default",
+        size: "lg",
+      })}
     >
       {children}
       <span className="button-arrow">
-        <ArrowRight data-icon="inline-end" />
+        <ArrowRight aria-hidden="true" />
       </span>
-    </Button>
+    </a>
   );
 }
 
 export function YogaGrove() {
+  const [language, setLanguage] = useState<Language>("tr");
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [booking, setBooking] = useState<string | null>(null);
-  const [info, setInfo] = useState<{ title: string; text: string } | null>(
-    null,
-  );
-  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [draftOpened, setDraftOpened] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
   const hero = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
   const { scrollY } = useScroll();
@@ -278,18 +189,52 @@ export function YogaGrove() {
   });
   const heroY = useTransform(scrollYProgress, [0, 1], ["0%", "18%"]);
   useMotionValueEvent(scrollY, "change", (value) => setScrolled(value > 70));
-  const nav = [
-    { label: "About", href: "#about" },
-    { label: "Classes", href: "#classes" },
-    { label: "Schedule", action: () => setScheduleOpen(true) },
-    { label: "Pricing", href: "#pricing" },
-    { label: "Journal", href: "#journal" },
-  ];
-
+  const t = (key: CopyKey) => copy[language][key];
+  const en = language === "en";
+  useEffect(() => {
+    document.documentElement.lang = language;
+    document.title = `One Day on an Island — ${language === "en" ? "19 September" : "19 Eylül"} 2026, Büyükada`;
+  }, [language]);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        menuButton.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", close);
+    return () => document.removeEventListener("keydown", close);
+  }, [menuOpen]);
+  function apply(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const body = ["name", "phone", "email", "instagram", "reference", "party"]
+      .map((key) => `${t(`form.${key}` as CopyKey)}: ${data.get(key) || "-"}`)
+      .join("\n");
+    setDraftOpened(true);
+    window.location.href = `mailto:hello@soulcollective.co?subject=${encodeURIComponent(en ? "One Day on an Island participation" : "One Day on an Island katılım")}&body=${encodeURIComponent(body)}`;
+  }
+  function Close() {
+    return (
+      <DialogClose
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="absolute top-4 right-4"
+          />
+        }
+        aria-label={en ? "Close dialog" : "Pencereyi kapat"}
+      >
+        <X />
+      </DialogClose>
+    );
+  }
   return (
     <MotionConfig reducedMotion="user">
       <a className="skip-link" href="#main">
-        Skip to content
+        {t("a11y.skip")}
       </a>
       <header
         className={cn(
@@ -300,81 +245,81 @@ export function YogaGrove() {
       >
         <div className="shell nav-inner">
           <Brand />
-          <nav aria-label="Main navigation" className="desktop-nav">
-            {nav.map((item) =>
-              item.href ? (
-                <a key={item.label} href={item.href}>
-                  {item.label}
-                </a>
-              ) : (
-                <button key={item.label} onClick={item.action}>
-                  {item.label}
-                </button>
-              ),
-            )}
-            <Action
-              light={!scrolled}
-              onClick={() => setBooking("Your first free class")}
-            >
-              Book a Class
-            </Action>
+          <nav
+            aria-label={en ? "Main navigation" : "Ana navigasyon"}
+            className="desktop-nav"
+          >
+            {navigation.map(([key, id]) => (
+              <a key={id} href={`#${id}`}>
+                {t(`nav.${key}`)}
+              </a>
+            ))}
           </nav>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="menu-toggle"
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
-            aria-expanded={menuOpen}
-            aria-controls="mobile-navigation"
-            onClick={() => setMenuOpen(!menuOpen)}
-          >
-            {menuOpen ? <X /> : <Menu />}
-          </Button>
-        </div>
-        {menuOpen && (
-          <motion.nav
-            id="mobile-navigation"
-            aria-label="Mobile navigation"
-            className="mobile-nav"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-          >
-            {nav.map((item) =>
-              item.href ? (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  {item.label}
-                  <ArrowUpRight />
-                </a>
-              ) : (
+          <div className="nav-controls">
+            <div
+              className="language-switch"
+              role="group"
+              aria-label={t("a11y.language")}
+            >
+              {(["tr", "en"] as const).map((lang) => (
                 <button
-                  key={item.label}
+                  key={lang}
+                  aria-pressed={language === lang}
                   onClick={() => {
-                    item.action?.();
+                    setLanguage(lang);
                     setMenuOpen(false);
                   }}
                 >
-                  {item.label}
-                  <ArrowUpRight />
+                  {lang.toUpperCase()}
                 </button>
-              ),
-            )}
-            <Action
-              onClick={() => {
-                setBooking("Your first free class");
-                setMenuOpen(false);
-              }}
+              ))}
+            </div>
+            <div className="desktop-join">
+              <Join light={!scrolled}>{t("nav.apply")}</Join>
+            </div>
+            <Button
+              ref={menuButton}
+              variant="ghost"
+              size="icon"
+              className="menu-toggle"
+              aria-label={
+                menuOpen
+                  ? en
+                    ? "Close menu"
+                    : "Menüyü kapat"
+                  : en
+                    ? "Open menu"
+                    : "Menüyü aç"
+              }
+              aria-expanded={menuOpen}
+              aria-controls="mobile-navigation"
+              onClick={() => setMenuOpen(!menuOpen)}
             >
-              Book a Class
-            </Action>
-          </motion.nav>
+              {menuOpen ? <X /> : <Menu />}
+            </Button>
+          </div>
+        </div>
+        {menuOpen && (
+          <nav
+            id="mobile-navigation"
+            className="mobile-nav"
+            aria-label={en ? "Mobile navigation" : "Mobil navigasyon"}
+          >
+            {navigation.map(([key, id]) => (
+              <a key={id} href={`#${id}`} onClick={() => setMenuOpen(false)}>
+                {t(`nav.${key}`)}
+                <ArrowUpRight aria-hidden="true" />
+              </a>
+            ))}
+            <a href="#basvuru" onClick={() => setMenuOpen(false)}>
+              {t("nav.apply")}
+              <ArrowUpRight aria-hidden="true" />
+            </a>
+          </nav>
         )}
       </header>
       <main id="main">
-        <section id="home" className="hero" ref={hero}>
+        <section id="top" className="hero" ref={hero}>
           <motion.div
             className="hero-image"
             style={{ y: reduced ? 0 : heroY }}
@@ -383,486 +328,414 @@ export function YogaGrove() {
             transition={{ duration: 1.8, ease: "easeOut" }}
           >
             <Photo
-              file="hero.png"
-              alt="Yoga at sunrise beside a mountain lake"
+              file="web/hero.webp"
+              alt={
+                en
+                  ? "An illustrated doorway opening onto the sea, surrounded by flowers and birds"
+                  : "Çiçekler ve kuşlarla çevrili, denize açılan resimli bir kapı"
+              }
               priority
             />
           </motion.div>
           <div className="hero-shade" />
           <div className="shell hero-inner">
             <motion.div
+              className="hero-copy"
               initial={{ opacity: 0, y: reduced ? 0 : 35 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.9, delay: 0.15 }}
-              className="hero-copy"
             >
-              <p className="eyebrow">● &nbsp; Yoga · Breathwork · Meditation</p>
-              <h1>
-                Find ease in
-                <br />
-                every breath.
-              </h1>
-              <p className="hero-description">
-                Small-group yoga and mindful movement
-                <br className="desktop-break" /> for every body, in-studio or at
-                home.
-              </p>
+              <p className="eyebrow">● &nbsp; {t("hero.eyebrow")}</p>
+              <h1>{t("hero.title")}</h1>
+              <p className="hero-description">{t("hero.body")}</p>
               <div className="actions">
-                <Action
-                  light
-                  onClick={() => setBooking("Your first free class")}
+                <Join light>{t("hero.primary")}</Join>
+                <a
+                  href="#akis"
+                  className={buttonVariants({ variant: "outline", size: "lg" })}
                 >
-                  Book a free class
-                </Action>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={() => setScheduleOpen(true)}
-                >
-                  See the schedule
-                </Button>
+                  {t("hero.secondary")}
+                </a>
+              </div>
+              <div className="event-facts">
+                {[
+                  [t("facts.date"), t("facts.day")],
+                  ["12:30 · 13:00", t("facts.departure")],
+                  ["50", t("facts.people")],
+                  ["00:30", t("facts.return")],
+                ].map(([value, label]) => (
+                  <div key={label}>
+                    <strong>{value}</strong>
+                    <span>{label}</span>
+                  </div>
+                ))}
               </div>
             </motion.div>
           </div>
         </section>
-
-        <section className="section shell tension">
+        <section id="gun" className="section shell tension">
           <Reveal className="section-heading centered">
-            <Label>Is this you?</Label>
-            <h2>
-              The tension you have been
-              <br className="desktop-break" /> told to simply live with.
-            </h2>
-            <p>
-              Most of us carry the whole day in our bodies. If any of these feel
-              familiar, your practice can meet you exactly there.
-            </p>
+            <Label>{t("intro.eyebrow")}</Label>
+            <h2>{t("intro.title")}</h2>
+            <p>{t("intro.body")}</p>
           </Reveal>
-          <div className="concerns-grid">
-            {[
-              {
-                icon: CloudRain,
-                text: "Stress and tension that never quite switches off",
-              },
-              {
-                icon: Sofa,
-                text: "Tight hips and stiffness from sitting all day",
-              },
-              {
-                icon: BatteryLow,
-                text: "Low, flat energy that coffee only masks",
-              },
-              {
-                icon: PersonStanding,
-                text: "Poor posture and a tight, aching back",
-              },
-              { icon: Moon, text: "Restless sleep and a busy, racing mind" },
-              {
-                icon: Wind,
-                text: "Feeling disconnected from your body and breath",
-              },
-            ].map(({ icon: Icon, text }, i) => (
-              <Reveal className="concern" key={text} delay={i * 0.04}>
+          <div className="concerns-grid event-principles">
+            {(
+              [
+                { key: "join", icon: Palette },
+                { key: "meet", icon: Users },
+                { key: "pace", icon: Wind },
+              ] as const
+            ).map(({ key, icon: Icon }, i) => (
+              <Reveal className="concern" key={key} delay={i * 0.04}>
                 <span className="icon-circle">
                   <Icon strokeWidth={1.3} />
                 </span>
-                <p>{text}</p>
+                <div>
+                  <h3>{t(`intro.${key}Title`)}</h3>
+                  <p>{t(`intro.${key}Body`)}</p>
+                </div>
               </Reveal>
             ))}
           </div>
         </section>
-
-        <section id="about" className="section shell about-grid">
-          <Reveal>
-            <Photo
-              file="naomi.jpg"
-              alt="Naomi, Yogagrove founder, seated in a sunlit studio"
-              className="about-photo"
-            />
-          </Reveal>
-          <Reveal className="about-copy">
-            <Label>About Yogagrove</Label>
-            <h2>A calm place to come home to yourself.</h2>
-            <p>
-              Yogagrove grew from a small home practice into a studio built on
-              one belief — that yoga should feel like ease, not another thing to
-              achieve. Whether you are new to the mat or returning after years
-              away, you are welcome exactly as you are.
-            </p>
-            <div className="stats">
-              {[
-                ["12+", "Years of practice"],
-                ["8", "Students per class"],
-                ["300+", "Members guided"],
-              ].map(([n, label]) => (
-                <div key={label}>
-                  <strong>{n}</strong>
-                  <span>{label}</span>
-                </div>
-              ))}
-            </div>
-            <Action
-              onClick={() =>
-                setInfo({
-                  title: "A little more about us",
-                  text: "Yogagrove began with a mat, a quiet room and a belief that movement should help you feel at home in your body. Today, our small studio brings that same care to every practice. With just eight students in each class, there is room to be seen, supported and welcomed exactly as you are. Meet our teachers below, or come along for your first free class.",
-                })
-              }
-            >
-              Read our story
-            </Action>
-          </Reveal>
+        <section id="mekan" className="section shell">
+          <div className="about-grid">
+            <Reveal>
+              <Photo
+                file="web/g4.webp"
+                alt={
+                  en
+                    ? "The villa’s garden facing the sea"
+                    : "Villanın denize bakan bahçesi"
+                }
+                className="about-photo"
+              />
+            </Reveal>
+            <Reveal className="about-copy">
+              <Label>{t("place.eyebrow")}</Label>
+              <h2>{t("place.title")}</h2>
+              <p>{t("place.body1")}</p>
+              <p>{t("place.body2")}</p>
+              <div className="stats">
+                {["50", "6", "12"].map((n, i) => (
+                  <div key={n}>
+                    <strong>{n}</strong>
+                    <span>{t(`place.stat${i + 1}` as CopyKey)}</span>
+                  </div>
+                ))}
+              </div>
+              <Join>{t("nav.apply")}</Join>
+            </Reveal>
+          </div>
+          <div className="venue-gallery" aria-label={t("gallery.label")}>
+            {gallery.map(([file, trAlt, enAlt], i) => (
+              <Reveal key={file} delay={i * 0.04}>
+                <Dialog>
+                  <DialogTrigger
+                    className="gallery-button"
+                    aria-label={`${en ? "View" : "Görüntüle"}: ${en ? enAlt : trAlt}`}
+                  >
+                    <Photo file={file} alt={en ? enAlt : trAlt} />
+                    <span className="class-arrow">
+                      <ArrowUpRight aria-hidden="true" />
+                    </span>
+                  </DialogTrigger>
+                  <DialogContent
+                    className="photo-dialog"
+                    showCloseButton={false}
+                  >
+                    <DialogTitle className="sr-only">
+                      {en ? enAlt : trAlt}
+                    </DialogTitle>
+                    <DialogDescription className="sr-only">
+                      {t("gallery.label")}
+                    </DialogDescription>
+                    <Image
+                      src={`/assets/${file}`}
+                      alt={en ? enAlt : trAlt}
+                      width={1760}
+                      height={2200}
+                      sizes="(max-width: 760px) 90vw, 800px"
+                    />
+                    <Close />
+                  </DialogContent>
+                </Dialog>
+              </Reveal>
+            ))}
+          </div>
         </section>
-
-        <section className="section shell method-grid">
+        <section id="akis" className="section shell method-grid">
           <div className="method-intro">
             <Reveal>
-              <Label>The Yogagrove Method</Label>
-              <h2>
-                A simple path
-                <br />
-                back to yourself.
-              </h2>
-              <p>
-                Every class moves through the same gentle arc — no rush, no
-                performance. Just three simple movements that guide your body
-                home.
-              </p>
-              <Action onClick={() => setBooking("Your first free class")} />
+              <Label>{t("flow.eyebrow")}</Label>
+              <h2>{t("flow.title")}</h2>
+              <p>{t("flow.body")}</p>
+              <Join>{t("nav.apply")}</Join>
             </Reveal>
           </div>
           <div className="method-stack">
-            {methods.map((method, i) => (
-              <motion.article
-                key={method.name}
-                className="method-card"
-                style={{
-                  top: 115 + i * 18,
-                  rotate: reduced ? 0 : i === 1 ? 2 : -2,
-                }}
-                initial={{ opacity: 0, y: reduced ? 0 : 60 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.15 }}
-                transition={{ duration: 0.7 }}
-              >
-                <Photo
-                  file={method.image}
-                  alt={`${method.name} — a gentle yoga practice in the studio`}
-                />
-                <div className="method-shade" />
-                <span className="method-number">0{i + 1}</span>
-                <div className="method-caption">
-                  <h3>{method.name}</h3>
-                  <p>{method.description}</p>
-                </div>
-              </motion.article>
-            ))}
+            {["web/boat.webp", "web/dusk.webp", "web/house-4.webp"].map(
+              (file, i) => (
+                <motion.article
+                  key={file}
+                  className="method-card"
+                  style={{
+                    top: 115 + i * 18,
+                    rotate: reduced ? 0 : i === 1 ? 2 : -2,
+                  }}
+                  initial={{ opacity: 0, y: reduced ? 0 : 60 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.15 }}
+                  transition={{ duration: 0.7 }}
+                >
+                  <Photo file={file} alt={t(`flow.s${i + 1}t` as CopyKey)} />
+                  <div className="method-shade" />
+                  <span className="method-number">0{i + 1}</span>
+                  <div className="method-caption">
+                    <h3>{t(`flow.s${i + 1}t` as CopyKey)}</h3>
+                    <p>{t(`flow.s${i + 1}b` as CopyKey)}</p>
+                  </div>
+                </motion.article>
+              ),
+            )}
           </div>
         </section>
-
-        <section id="classes" className="section shell">
+        <section id="atolyeler" className="section shell">
           <Reveal className="section-heading split-heading">
             <div>
-              <Label>Classes</Label>
-              <h2>
-                Unlock balance through
-                <br />
-                our daily yoga classes
-              </h2>
+              <Label>{t("workshops.eyebrow")}</Label>
+              <h2>{t("workshops.title")}</h2>
+              <p>{t("workshops.body")}</p>
             </div>
-            <Action onClick={() => setBooking("A studio session")}>
-              Book a session
-            </Action>
+            <Join>{t("nav.apply")}</Join>
           </Reveal>
           <div className="classes-grid">
-            {classes.map((item, i) => (
-              <Reveal key={item.name} delay={i * 0.06}>
-                <button
-                  className="class-card"
-                  onClick={() => setBooking(item.name)}
-                >
-                  <div className="class-image">
-                    <Photo file={item.image} alt={`${item.name} yoga class`} />
-                    <div className="class-badges">
-                      <Badge variant="secondary">{item.frequency}</Badge>
-                      <Badge variant="secondary">{item.duration}</Badge>
+            {workshops[language].map((w, i) => (
+              <Reveal key={w.i} delay={i * 0.04}>
+                <Dialog>
+                  <DialogTrigger className="class-card">
+                    <div className="class-image">
+                      <Photo file={w.i} alt={`${w.t} · ${w.h}`} />
+                      <div className="class-badges">
+                        <Badge variant="secondary">{w.m}</Badge>
+                      </div>
+                      <span className="class-arrow">
+                        <ArrowUpRight aria-hidden="true" />
+                      </span>
                     </div>
-                    <span className="class-arrow">
-                      <ArrowUpRight />
-                    </span>
-                  </div>
-                  <h3>{item.name}</h3>
-                  <p>{item.description}</p>
-                </button>
+                    <h3>{w.t}</h3>
+                    <p className="workshop-host">{w.h}</p>
+                    <p>{w.s}</p>
+                  </DialogTrigger>
+                  <DialogContent
+                    className="workshop-dialog"
+                    showCloseButton={false}
+                  >
+                    <Photo
+                      file={w.i}
+                      alt={`${w.t} · ${w.h}`}
+                      className="workshop-dialog-photo"
+                    />
+                    <DialogHeader>
+                      <DialogTitle>{w.t}</DialogTitle>
+                      <DialogDescription>
+                        {w.h} · {w.m}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <p>{w.mm}</p>
+                    <p className="article-body">{w.b}</p>
+                    <Close />
+                  </DialogContent>
+                </Dialog>
               </Reveal>
             ))}
           </div>
         </section>
-
-        <section className="benefits section">
-          <div className="shell">
-            <Reveal className="section-heading centered">
-              <Label>Benefits</Label>
-              <h2>
-                How mindful movement
-                <br />
-                changes everything for you
-              </h2>
-            </Reveal>
-            <div className="benefits-grid">
-              {[
-                { icon: PersonStanding, text: "Real, functional strength" },
-                { icon: Wind, text: "A calmer, quieter mind" },
-                { icon: MoveUpRight, text: "Freer hips and mobility" },
-                { icon: Moon, text: "Deeper, more restful sleep" },
-                { icon: Users, text: "A warm, welcoming community" },
-                { icon: Heart, text: "Confidence in your body" },
-              ].map(({ icon: Icon, text }, i) => (
-                <Reveal key={text} className="benefit" delay={i * 0.04}>
-                  <Icon strokeWidth={1.2} />
-                  <h3>{text}</h3>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section id="teachers" className="section shell">
+        <section id="ev-sahipleri" className="section shell">
           <Reveal className="section-heading centered">
-            <Label>Your teachers</Label>
-            <h2>Meet the ones who will guide you.</h2>
-            <p>
-              A small, senior team — every class is led by an experienced
-              teacher who knows your name and your practice.
-            </p>
+            <Label>{t("hosts.eyebrow")}</Label>
+            <h2>{t("hosts.title")}</h2>
+            <p>{t("hosts.body")}</p>
           </Reveal>
           <div className="teachers-grid">
             {[
-              ["Naomi", "Founder · Vinyasa & Breath", "naomi.jpg"],
-              ["Claire", "Yin & Restorative", "claire.jpg"],
-              ["Emma", "Hatha & Prenatal", "emma.jpg"],
-            ].map(([name, specialty, file], i) => (
-              <Reveal key={name} delay={i * 0.08}>
-                <Photo
-                  file={file}
-                  alt={`${name}, ${specialty}`}
-                  className="teacher-photo"
-                />
+              ["Dr. Oğuz Öner", "oguz", "web/oguz.webp"],
+              ["Şeyma Çavdur", "seyma", "web/seyma.webp"],
+              ["Bisou Me", "bisou", "web/w5.webp"],
+            ].map(([name, key, file], i) => (
+              <Reveal key={key} delay={i * 0.08}>
+                <Photo file={file} alt={name} className="teacher-photo" />
                 <h3>{name}</h3>
-                <p>{specialty}</p>
+                <p>{t(`hosts.${key}` as CopyKey)}</p>
               </Reveal>
             ))}
           </div>
-          <div className="center-action">
-            <Action
-              onClick={() =>
-                setInfo({
-                  title: "Your practice, thoughtfully guided",
-                  text: "Naomi brings more than twelve years of practice to her Vinyasa and breathwork classes. Claire creates space for stillness through Yin and restorative yoga. Emma offers a grounded, welcoming approach to Hatha and prenatal practice. Each teacher offers variations, personal attention and a warm welcome for beginners.",
-                })
-              }
-            >
-              Meet the full team
-            </Action>
-          </div>
         </section>
-
-        <section className="section testimonials">
-          <div className="shell">
-            <Reveal className="section-heading centered">
-              <Label>Kind words</Label>
-              <h2>
-                Loved by people
-                <br />
-                who keep showing up.
-              </h2>
-              <p>
-                A few honest words from the people who practise with us —
-                beginners, parents-to-be and long-time regulars alike.
-              </p>
+        <section id="muzik" className="benefits section">
+          <div className="shell music-grid">
+            <Reveal>
+              <Label>{t("music.time")}</Label>
+              <h2>{t("music.title")}</h2>
+              <p>{t("music.tba")}</p>
             </Reveal>
-            <Reveal className="featured-quote">
-              <Photo
-                file="student.png"
-                alt="Thomas, a smiling Yogagrove student"
-              />
-              <div>
-                <span className="stars" aria-label="5 out of 5 stars">
-                  ★★★★★
-                </span>
-                <blockquote>
-                  “I came for the flexibility and stayed for the calm — it’s the
-                  one hour a week I now never miss.”
-                </blockquote>
-                <h4>Thomas Ward</h4>
-                <p>Member since 2023</p>
+            <Reveal>
+              <div className="music-heading">
+                <h3>{t("music.djs")}</h3>
+                <span>{t("music.order")}</span>
               </div>
-            </Reveal>
-            <div className="quotes-grid">
-              {[
-                [
-                  "The small classes make all the difference — the teacher actually adjusts you and remembers your name.",
-                  "James Miller",
-                  "Vinyasa regular",
-                ],
-                [
-                  "I hadn’t moved in years and never felt judged once. Three months in, my back pain is basically gone.",
-                  "Sarah Collins",
-                  "Beginner",
-                ],
-                [
-                  "Even the online classes feel personal — the streaming setup is genuinely well thought through.",
-                  "Daniel Hughes",
-                  "Online member",
-                ],
-              ].map(([quote, name, role]) => (
-                <Reveal className="quote" key={name}>
-                  <span className="stars" aria-label="5 out of 5 stars">
-                    ★★★★★
-                  </span>
-                  <blockquote>“{quote}”</blockquote>
-                  <h4>{name}</h4>
-                  <p>{role}</p>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section id="pricing" className="section shell">
-          <Reveal className="section-heading centered">
-            <Label>Pricing</Label>
-            <h2>Simple pricing, no lock-in.</h2>
-            <p>
-              Drop in whenever suits you, or join as a member and save.
-              <br />
-              Cancel any time — no long contracts, ever.
-            </p>
-          </Reveal>
-          <div className="pricing-grid">
-            {plans.map((plan, i) => (
-              <Reveal
-                key={plan.name}
-                className={cn("price-card", i === 1 && "price-featured")}
-                delay={i * 0.08}
-              >
-                <div>
-                  <h3>{plan.name}</h3>
-                  <p>{plan.subtitle}</p>
-                </div>
-                <p className="price">
-                  <sup>$</sup>
-                  <strong>{plan.price}</strong>
-                  <span>/{plan.unit}</span>
-                </p>
-                <Action
-                  light={i === 1}
-                  onClick={() =>
-                    setBooking(`${plan.name} — $${plan.price}/${plan.unit}`)
-                  }
-                >
-                  Select Plan
-                </Action>
-                <ul>
-                  {plan.features.map((feature) => (
-                    <li key={feature}>
-                      <Check aria-hidden="true" />
-                      {feature}
+              <ol className="music-list" aria-label={t("music.listLabel")}>
+                {["Emre Arısev", "Manthem", "Özlem Atalay", "Tugen"].map(
+                  (name, i) => (
+                    <li key={name}>
+                      <span>0{i + 1}</span>
+                      {name}
                     </li>
-                  ))}
-                </ul>
-              </Reveal>
-            ))}
+                  ),
+                )}
+              </ol>
+            </Reveal>
           </div>
         </section>
-
-        <section id="faq" className="section shell faq-grid">
+        <section id="biletler" className="section shell">
+          <Reveal className="section-heading centered">
+            <Label>{t("tickets.eyebrow")}</Label>
+            <h2>{t("tickets.title")}</h2>
+            <p>{t("tickets.body")}</p>
+          </Reveal>
+          <Reveal className="price-card price-featured event-ticket">
+            <div>
+              <Label>{t("tickets.tag")}</Label>
+              <h3>The Crossing Pass</h3>
+              <p>{t("tickets.intro")}</p>
+              <Join light>{t("tickets.cta")}</Join>
+            </div>
+            <div>
+              <h3>{t("tickets.includes")}</h3>
+              <ul>
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <li key={i}>
+                    <Check aria-hidden="true" />
+                    {t(`tickets.i${i}` as CopyKey)}
+                  </li>
+                ))}
+              </ul>
+              <p>{t("tickets.note")}</p>
+            </div>
+          </Reveal>
+        </section>
+        <section id="basvuru" className="section shell application-grid">
+          <Reveal className="about-copy">
+            <Label>{t("apply.eyebrow")}</Label>
+            <h2>{t("apply.title")}</h2>
+            <p>{t("apply.body")}</p>
+          </Reveal>
           <Reveal>
-            <Label>FAQ</Label>
-            <h2>
-              Questions,
-              <br />
-              answered.
-            </h2>
+            <form className="application-form" onSubmit={apply}>
+              {(
+                ["name", "phone", "email", "instagram", "reference"] as const
+              ).map((key) => (
+                <div className="field" key={key}>
+                  <label htmlFor={key}>{t(`form.${key}`)}</label>
+                  <input
+                    id={key}
+                    name={key}
+                    type={
+                      key === "email"
+                        ? "email"
+                        : key === "phone"
+                          ? "tel"
+                          : "text"
+                    }
+                    autoComplete={
+                      key === "name"
+                        ? "name"
+                        : key === "email"
+                          ? "email"
+                          : key === "phone"
+                            ? "tel"
+                            : undefined
+                    }
+                    required={["name", "phone", "email"].includes(key)}
+                    placeholder={key === "instagram" ? "@" : undefined}
+                  />
+                </div>
+              ))}
+              <div className="field">
+                <label htmlFor="party">{t("form.party")}</label>
+                <select id="party" name="party">
+                  {(["one", "two", "three"] as const).map((key, i) => (
+                    <option key={key} value={i + 1}>
+                      {t(`form.${key}`)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <label className="form-check form-wide" htmlFor="terms">
+                <input type="checkbox" id="terms" name="terms" required />
+                <span>
+                  {t("form.t1")}{" "}
+                  <a className="inline-link" href="#sss">
+                    {t("form.t2")}
+                  </a>{" "}
+                  {t("form.t3")}
+                </span>
+              </label>
+              <p className="form-note form-wide">{t("form.note")}</p>
+              <Button type="submit" size="lg" className="form-wide">
+                {t("form.submit")}
+                <ArrowRight />
+              </Button>
+              <p role="status" className="form-note form-wide">
+                {draftOpened
+                  ? en
+                    ? "Your email draft is opening. Send it to complete your request."
+                    : "E-posta taslağın açılıyor. Katılım talebini tamamlamak için e-postayı göndermelisin."
+                  : ""}
+              </p>
+            </form>
+          </Reveal>
+        </section>
+        <section id="sss" className="section shell faq-grid">
+          <Reveal>
+            <Label>{t("faq.eyebrow")}</Label>
+            <h2>{t("faq.title")}</h2>
             <p>
-              Everything you might want to know before your first class. Still
-              curious?{" "}
-              <a href="mailto:hello@yogagrove.studio" className="inline-link">
-                Just reach out.
+              <a className="inline-link" href="mailto:hello@soulcollective.co">
+                hello@soulcollective.co
               </a>
             </p>
           </Reveal>
           <Reveal>
-            <Accordion defaultValue={["faq-0"]}>
-              {faqs.map(([question, answer], i) => (
-                <AccordionItem key={question} value={`faq-${i}`}>
-                  <AccordionTrigger>{question}</AccordionTrigger>
-                  <AccordionContent>{answer}</AccordionContent>
+            <Accordion defaultValue={["faq-1"]}>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
+                <AccordionItem key={i} value={`faq-${i}`}>
+                  <AccordionTrigger>
+                    {t(`faq.q${i}` as CopyKey)}
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    {t(`faq.a${i}` as CopyKey)}
+                  </AccordionContent>
                 </AccordionItem>
               ))}
             </Accordion>
           </Reveal>
         </section>
-
-        <section id="journal" className="section shell journal-section">
-          <Reveal className="section-heading split-heading">
-            <div>
-              <Label>From the journal</Label>
-              <h2>A little room to reflect.</h2>
-            </div>
-            <p>Simple notes for a more mindful everyday.</p>
-          </Reveal>
-          <div className="journal-grid">
-            {[
-              {
-                title: "A softer start to your morning",
-                image: "breathe.jpg",
-                text: "Before reaching for your phone, take a moment to notice the room around you. Feel your feet on the floor. Let your shoulders settle. Take a few easy breaths without trying to change them. A gentle start does not need to be a long routine — just a little room to arrive.",
-              },
-              {
-                title: "You don’t need to be flexible to begin",
-                image: "hatha.jpg",
-                text: "Yoga begins wherever you are today. Bend your knees, use a block, or take a rest whenever you need it. There is no perfect shape to reach. The practice is learning to pay attention, to move with curiosity and to meet your body with a little more kindness.",
-              },
-              {
-                title: "The quiet importance of rest",
-                image: "restore.jpg",
-                text: "Some days, the most useful practice is a pause. Find a comfortable position, soften your jaw and let your breathing be natural. Notice the support beneath you. Rest belongs in your day just as much as movement does; you don’t have to earn it first.",
-              },
-            ].map((article) => (
-              <Reveal key={article.title}>
-                <button
-                  className="journal-card"
-                  onClick={() =>
-                    setInfo({ title: article.title, text: article.text })
-                  }
-                >
-                  <Photo file={article.image} alt={article.title} />
-                  <span>MINDFUL LIVING · 2 MIN READ</span>
-                  <h3>
-                    {article.title}
-                    <ArrowUpRight aria-hidden="true" />
-                  </h3>
-                </button>
-              </Reveal>
-            ))}
-          </div>
-        </section>
-
         <section className="cta">
           <Photo
-            file="cta.png"
-            alt="A tranquil sunlit space for yoga and reflection"
+            file="web/dusk.webp"
+            alt={
+              en
+                ? "Pool and sea view at dusk on Büyükada"
+                : "Büyükada’da gün batımında havuz ve deniz"
+            }
           />
           <div className="cta-shade" />
           <Reveal className="cta-copy">
-            <p className="eyebrow">Begin today</p>
-            <h2>Your first class is on us.</h2>
-            <p>
-              Come as you are. Book a spot, roll out a mat, and see how you feel
-              after just one hour with us.
-            </p>
-            <Action light onClick={() => setBooking("Your first free class")} />
+            <p className="eyebrow">{t("closing.eyebrow")}</p>
+            <h2>{t("closing.title")}</h2>
+            <p>{t("closing.body")}</p>
+            <Join light>{t("closing.cta")}</Join>
           </Reveal>
         </section>
       </main>
@@ -871,142 +744,50 @@ export function YogaGrove() {
           <div className="footer-grid">
             <div className="footer-about">
               <Brand />
-              <p>
-                Small-group yoga and mindful movement — in the studio or
-                streamed gently to your home.
-              </p>
-              <Leaf strokeWidth={1.2} aria-hidden="true" />
-            </div>
-            <div>
-              <h4>Explore</h4>
-              <a href="#about">About</a>
-              <a href="#classes">Classes</a>
-              <button onClick={() => setScheduleOpen(true)}>Schedule</button>
-              <a href="#pricing">Pricing</a>
-            </div>
-            <div>
-              <h4>Studio</h4>
-              <a href="#about">Our Story</a>
-              <a href="#teachers">Our Teachers</a>
-              <a href="#journal">Journal</a>
-              <a href="#faq">FAQ</a>
-            </div>
-            <div>
-              <h4>Visit</h4>
-              <a
-                href="https://maps.google.com/?q=41+Gertrude+Street,+Fitzroy+VIC+3065"
-                target="_blank"
-                rel="noreferrer"
-              >
-                41 Gertrude Street,
-                <br />
-                Fitzroy VIC 3065
+              <p>{t("footer.about")}</p>
+              <a href="https://instagram.com/collectivebysoul">
+                @collectivebysoul
               </a>
-              <a href="tel:+61394170432">(03) 9417 0432</a>
-              <a href="mailto:hello@yogagrove.studio">hello@yogagrove.studio</a>
+            </div>
+            <div>
+              <h4>{t("footer.explore")}</h4>
+              {navigation.slice(0, 3).map(([key, id]) => (
+                <a key={id} href={`#${id}`}>
+                  {t(`nav.${key}`)}
+                </a>
+              ))}
+            </div>
+            <div>
+              <h4>{t("footer.event")}</h4>
+              {navigation.slice(3).map(([key, id]) => (
+                <a key={id} href={`#${id}`}>
+                  {t(`nav.${key}`)}
+                </a>
+              ))}
+              <a href="#basvuru">{t("nav.apply")}</a>
+            </div>
+            <div>
+              <h4>{t("footer.date")}</h4>
+              <p>Büyükada, İstanbul</p>
               <p>
-                Mon–Fri 6am–9pm
+                {t("footer.boat")}
                 <br />
-                Sat–Sun 7am–5pm
+                {t("footer.return")}
               </p>
+              <a href="mailto:hello@soulcollective.co">
+                hello@soulcollective.co
+              </a>
             </div>
           </div>
           <div className="footer-wordmark" aria-hidden="true">
-            yogagrove
+            soul collective
           </div>
           <div className="footer-bottom">
-            <p>© 2026 Yogagrove Studio. All rights reserved.</p>
-            <a
-              href="https://yogagrove.framer.website/privacy"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Privacy Policy <ArrowUpRight aria-hidden="true" />
-            </a>
+            <p>© 2026 Soul Collective</p>
+            <span>ONE DAY ON AN ISLAND</span>
           </div>
         </div>
       </footer>
-
-      <Dialog
-        open={booking !== null}
-        onOpenChange={(open) => {
-          if (!open) setBooking(null);
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <div className="dialog-symbol">
-              <Flower2 />
-            </div>
-            <DialogTitle>Make a little space for yourself.</DialogTitle>
-            <DialogDescription>{booking}</DialogDescription>
-          </DialogHeader>
-          <p>
-            We’d love to welcome you to the mat. Contact the studio to find a
-            class and confirm availability.
-          </p>
-          <a
-            className={buttonVariants({ size: "lg" })}
-            href={`mailto:hello@yogagrove.studio?subject=${encodeURIComponent(`Class enquiry: ${booking ?? "Yoga"}`)}`}
-          >
-            Email the studio
-            <ArrowUpRight data-icon="inline-end" />
-          </a>
-          <a className="dialog-phone" href="tel:+61394170432">
-            Or call (03) 9417 0432
-          </a>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <div className="dialog-symbol">
-              <Sun />
-            </div>
-            <DialogTitle>Find your rhythm.</DialogTitle>
-            <DialogDescription>
-              Our weekly classes. Contact the studio for current times and
-              availability.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="schedule-list">
-            {classes.map((item) => (
-              <button
-                key={item.name}
-                onClick={() => {
-                  setScheduleOpen(false);
-                  setBooking(item.name);
-                }}
-              >
-                <div>
-                  <strong>{item.name}</strong>
-                  <span>
-                    {item.frequency} · {item.duration}
-                  </span>
-                </div>
-                <ArrowUpRight />
-              </button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
-      <Dialog
-        open={info !== null}
-        onOpenChange={(open) => {
-          if (!open) setInfo(null);
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <div className="dialog-symbol">
-              <Sparkles />
-            </div>
-            <DialogTitle>{info?.title}</DialogTitle>
-            <DialogDescription>From Yogagrove, with care.</DialogDescription>
-          </DialogHeader>
-          <p className="article-body">{info?.text}</p>
-        </DialogContent>
-      </Dialog>
     </MotionConfig>
   );
 }

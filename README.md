@@ -1,6 +1,6 @@
-# Collective by Soul · Yogagrove
+# Collective by Soul · One Day on an Island
 
-A responsive recreation of the [Yogagrove Framer homepage](https://yogagrove.framer.website/), built with Next.js App Router, TypeScript, shadcn/ui (Base UI), Tailwind CSS, and Motion.
+A bilingual event landing page using the original Yogagrove-inspired frontend from commit `0f02bf104b30b8af63335894d518069b45ba318b`, built with Next.js App Router, TypeScript, shadcn/ui (Base UI), Tailwind CSS, and Motion.
 
 ## Requirements
 
@@ -24,48 +24,50 @@ Open [localhost:3000](http://localhost:3000). No environment variables or extern
 
 ## Commands
 
-| Command | Purpose |
-| --- | --- |
-| `pnpm dev` | Start the development server |
-| `pnpm lint` | Run ESLint |
-| `pnpm build` | Build for production and check TypeScript |
-| `pnpm start` | Serve the production build after `pnpm build` |
-| `pnpm add <package>` | Add a runtime dependency |
-| `pnpm add -D <package>` | Add a development dependency |
+| Command                            | Purpose                                        |
+| ---------------------------------- | ---------------------------------------------- |
+| `pnpm dev`                         | Start the development server                   |
+| `pnpm lint`                        | Run ESLint                                     |
+| `pnpm build`                       | Build for production and check TypeScript      |
+| `pnpm start`                       | Serve the production build after `pnpm build`  |
+| `pnpm add <package>`               | Add a runtime dependency                       |
+| `pnpm add -D <package>`            | Add a development dependency                   |
 | `pnpm exec shadcn add <component>` | Add a shadcn component using the installed CLI |
 
 For CI and clean checkouts, use `pnpm install --frozen-lockfile`, then `pnpm lint` and `pnpm build`.
 
 ## Project structure
 
-| Path | Purpose |
-| --- | --- |
-| `app/page.tsx` | Server-rendered page entry point |
-| `app/layout.tsx` | Root layout, metadata, and local fonts |
-| `components/yoga-grove.tsx` | Sections, content arrays, animation helpers, and dialogs |
-| `components/ui/` | shadcn components built on Base UI |
-| `components.json` | shadcn configuration and aliases |
-| `app/globals.css` | Design tokens, layouts, spacing, and responsive styles |
-| `app/fonts/` | Self-hosted Poppins fonts and their license |
-| `public/images/` | Reference imagery served locally |
-| `scripts/check-package-manager.mjs` | pnpm install guard |
-| `AGENTS.md` | Repository guidance for coding agents |
-| `CLAUDE.md` | Imports AGENTS.md to keep guidance in one place |
+| Path                                | Purpose                                                |
+| ----------------------------------- | ------------------------------------------------------ |
+| `app/page.tsx`                      | Server-rendered page entry point                       |
+| `app/layout.tsx`                    | Root layout, metadata, and local fonts                 |
+| `components/yoga-grove.tsx`         | Event sections, animation helpers, and dialogs         |
+| `components/event-content.ts`       | Turkish and English event copy and workshop data       |
+| `public/assets/web/`                | Current event photography                              |
+| `components/ui/`                    | shadcn components built on Base UI                     |
+| `components.json`                   | shadcn configuration and aliases                       |
+| `app/globals.css`                   | Design tokens, layouts, spacing, and responsive styles |
+| `app/fonts/`                        | Self-hosted Poppins fonts and their license            |
+| `public/images/`                    | Reference imagery served locally                       |
+| `scripts/check-package-manager.mjs` | pnpm install guard                                     |
+| `AGENTS.md`                         | Repository guidance for coding agents                  |
+| `CLAUDE.md`                         | Imports AGENTS.md to keep guidance in one place        |
 
 ## Editing the site
 
-Edit classes, plans, FAQs, teachers, and journal previews in `components/yoga-grove.tsx`. Update metadata in `app/layout.tsx` and visual tokens and section spacing in `app/globals.css`. Keep image descriptions meaningful and update asset paths when replacing images.
+Edit bilingual copy and workshop information in `components/event-content.ts` and section composition in `components/yoga-grove.tsx`. Update metadata in `app/layout.tsx` and styles in `app/globals.css`.
 
-The page includes a hero entrance and parallax, scroll reveals, sticky stacking cards, hover effects, mobile navigation, FAQs, class selection, pricing enquiries, and journal previews. Motion and CSS respect reduced-motion preferences.
+The page preserves the original full-width hero, reveal animations, sticky stacking photo cards, workshop cards, host portraits, FAQ layout, closing banner, and large footer wordmark. Event-specific additions include venue and boat photo dialogs, music listings, a single Crossing Pass, and a participation form. Motion and CSS respect reduced-motion preferences.
 
-Check both desktop and mobile after layout changes, especially the testimonial-to-pricing transition and spacing around the closing banner. Run `pnpm lint` and `pnpm build` before submitting changes. There is currently no automated test suite; check affected interactions in the browser.
+The homepage is served by the App Router. The previous `/index.html` address redirects to `/`, including existing section anchors. Turkish is the initial language; the TR/EN control switches the copy and document language. Social image URLs use `VERCEL_PROJECT_PRODUCTION_URL` when deployed on Vercel, and localhost during local development.
+
+Check desktop and mobile layouts and keyboard interactions after changes. Run `pnpm lint` and `pnpm build` before submitting changes. There is no configured automated test suite.
 
 ## Current scope
 
-This is a single-page frontend recreation. About and journal content opens in dialogs. The schedule displays class frequencies rather than live availability. Booking and pricing actions open an enquiry dialog with email and telephone links; no reservations, payments, or submissions are stored.
-
-Replace the reference studio contact details and connect a booking provider before accepting real bookings. The privacy link currently points to the reference website. Production hosting is not configured in this repository.
+There is no database, checkout, booking service, or stored form submission. The participation form validates required fields and opens an email draft addressed to `hello@soulcollective.co`. Guests must send the email themselves; opening the draft is not a reservation confirmation.
 
 ## Assets and attribution
 
-Imagery and studio content come from the [reference site](https://yogagrove.framer.website/); journal preview text is sample content. Confirm appropriate permissions before reusing reference assets for another brand. Poppins is distributed under the [SIL Open Font License](app/fonts/OFL.txt) and is hosted locally, so builds do not need a Google Fonts connection.
+Current event copy and photography are preserved from the event landing page. Original reference imagery remains in `public/images/` for historical reference. Poppins is distributed under the [SIL Open Font License](app/fonts/OFL.txt) and is hosted locally, so builds do not need a Google Fonts connection.

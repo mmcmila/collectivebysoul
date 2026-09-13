@@ -1417,3 +1417,338 @@ h4 {
     margin-bottom: 24px;
   }
 }
+
+/* Event content in the original 0f02bf1 layout. */
+.nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.desktop-nav {
+  gap: 20px;
+}
+.language-switch {
+  display: flex;
+  border: 1px solid currentColor;
+  border-radius: 99px;
+  padding: 3px;
+}
+.language-switch button {
+  font-size: 11px;
+  border-radius: 99px;
+  padding: 5px 7px;
+}
+.language-switch button[aria-pressed="true"] {
+  background: var(--foreground);
+  color: var(--background);
+}
+.hero-copy h1 {
+  max-width: 750px;
+}
+.hero-description {
+  max-width: 620px;
+}
+.hero-shade {
+  background:
+    linear-gradient(90deg, #14261ad9, #14261a55 75%),
+    linear-gradient(180deg, #14261a55, transparent 45%);
+}
+.event-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 38px;
+  margin-top: 36px;
+}
+.event-facts strong,
+.event-facts span {
+  display: block;
+}
+.event-facts strong {
+  font-weight: 500;
+  font-size: 18px;
+}
+.event-facts span {
+  font-size: 11px;
+  margin-top: 4px;
+}
+.event-principles {
+  grid-template-columns: repeat(3, 1fr);
+}
+.event-principles h3 {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+.about-copy > p + p {
+  margin-top: 18px;
+}
+.venue-gallery {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 40px;
+}
+.gallery-button {
+  width: 100%;
+  position: relative;
+  text-align: left;
+}
+.gallery-button .photo {
+  height: 230px;
+  border-radius: 16px;
+}
+.gallery-button .class-arrow {
+  right: 12px;
+  bottom: 12px;
+}
+.photo-dialog[data-slot="dialog-content"] {
+  max-width: min(900px, calc(100% - 32px));
+}
+.photo-dialog > img {
+  width: 100%;
+  height: 70svh;
+  object-fit: contain;
+}
+.split-heading > div {
+  max-width: 790px;
+}
+.workshop-host {
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+.workshop-dialog-photo {
+  height: 250px;
+  border-radius: 14px;
+}
+.workshop-dialog[data-slot="dialog-content"] {
+  max-width: min(620px, calc(100% - 32px));
+}
+.music-grid,
+.application-grid {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: 100px;
+}
+.music-grid h2 {
+  margin: 22px 0;
+}
+.music-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.music-list {
+  list-style: none;
+  padding: 0;
+  margin-top: 16px;
+}
+.music-list li {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  border-bottom: 1px solid #d6dccb;
+  padding: 20px 0;
+  font-size: 26px;
+}
+.music-list li span {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.event-ticket {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 70px;
+  padding: 48px;
+}
+.event-ticket h3 {
+  margin-top: 20px;
+}
+.event-ticket > div > p {
+  line-height: 1.8;
+  margin: 20px 0;
+}
+.event-ticket ul {
+  margin-top: 24px;
+}
+.event-ticket li svg {
+  flex-shrink: 0;
+}
+.application-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  padding: 30px;
+  background: var(--secondary);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+.field label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.field input,
+.field select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--background);
+  font-size: 16px;
+}
+.field input:focus-visible,
+.field select:focus-visible,
+.form-check input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+.form-wide {
+  grid-column: 1/-1;
+}
+.form-check {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  font-size: 13px;
+}
+.form-check input {
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+.form-note {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.footer {
+  background-image: none;
+}
+.footer-wordmark {
+  font-size: clamp(60px, 12vw, 190px);
+}
+.cta-shade {
+  background: #15271b99;
+}
+@media (max-width: 1200px) {
+  .desktop-nav,
+  .desktop-join {
+    display: none;
+  }
+  .menu-toggle {
+    display: inline-flex;
+  }
+  .mobile-nav {
+    display: flex;
+    flex-direction: column;
+    padding: 5px 32px 24px;
+    gap: 3px;
+  }
+  .mobile-nav > a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .mobile-nav svg {
+    width: 20px;
+  }
+}
+@media (max-width: 760px) {
+  .brand {
+    font-size: 18px;
+    gap: 7px;
+  }
+  .brand svg {
+    width: 25px;
+  }
+  .nav-controls {
+    gap: 8px;
+  }
+  .hero {
+    max-height: none;
+    min-height: 820px;
+  }
+  .hero h1 {
+    font-size: 52px;
+  }
+  .hero-inner {
+    padding-top: 145px;
+  }
+  .hero-shade {
+    background: linear-gradient(180deg, #14261a80, #14261abf);
+  }
+  .hero .actions {
+    flex-wrap: wrap;
+  }
+  .event-facts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  .event-principles {
+    grid-template-columns: 1fr;
+  }
+  .event-principles .concern {
+    flex-direction: row;
+    align-items: center;
+  }
+  .venue-gallery {
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .venue-gallery > :first-child {
+    grid-column: 1/-1;
+  }
+  .gallery-button .photo {
+    height: 200px;
+  }
+  .venue-gallery > :first-child .photo {
+    height: 280px;
+  }
+  .classes-grid {
+    grid-template-columns: 1fr;
+  }
+  .class-image {
+    height: 360px;
+  }
+  .class-card p {
+    font-size: 14px;
+  }
+  .class-badges [data-slot="badge"] {
+    font-size: 11px;
+  }
+  .method-card {
+    height: 540px;
+  }
+  .music-grid,
+  .application-grid,
+  .event-ticket {
+    grid-template-columns: 1fr;
+    gap: 35px;
+  }
+  .event-ticket {
+    padding: 30px;
+  }
+  .application-form {
+    grid-template-columns: 1fr;
+    padding: 24px;
+  }
+  .footer-wordmark {
+    font-size: 11.8vw;
+  }
+}
+
+.brand-mark {
+  filter: brightness(0) invert(1);
+}
+.header-scrolled .brand-mark,
+.header-open .brand-mark {
+  filter: brightness(0) saturate(100%);
+  opacity: 0.8;
+}
+@media (max-width: 760px) {
+  .brand-mark {
+    width: 25px;
+    height: 29px;
+  }
+}
