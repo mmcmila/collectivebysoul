@@ -1738,14 +1738,6 @@ h4 {
   }
 }
 
-.brand-mark {
-  filter: brightness(0) invert(1);
-}
-.header-scrolled .brand-mark,
-.header-open .brand-mark {
-  filter: brightness(0) saturate(100%);
-  opacity: 0.8;
-}
 @media (max-width: 760px) {
   .brand-mark {
     width: 25px;
