@@ -20,7 +20,7 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open [localhost:3000](http://localhost:3000). No environment variables or external services are required for the current frontend.
+Open [localhost:3000](http://localhost:3000). No environment variables are required. Application submissions require access to the configured Google Form.
 
 ## Commands
 
@@ -62,11 +62,22 @@ The page preserves the original full-width hero, reveal animations, sticky stack
 
 The homepage is served by the App Router. The previous `/index.html` address redirects to `/`, including existing section anchors. Turkish is the initial language; the TR/EN control switches the copy and document language. Social image URLs use `VERCEL_PROJECT_PRODUCTION_URL` when deployed on Vercel, and localhost during local development.
 
-Check desktop and mobile layouts and keyboard interactions after changes. Run `pnpm lint` and `pnpm build` before submitting changes. There is no configured automated test suite.
+Check desktop and mobile layouts and keyboard interactions after changes. Run `pnpm lint` and `pnpm build` before submitting changes. Run `node --experimental-strip-types --test tests/google-form.test.mjs` on Node.js 22.6+ to check validation, field mapping, and upstream confirmation handling. These tests use mocked network responses and do not create Google Form entries.
 
 ## Current scope
 
-There is no database, checkout, booking service, or stored form submission. The participation form validates required fields and opens an email draft addressed to `hello@soulcollective.co`. Guests must send the email themselves; opening the draft is not a reservation confirmation.
+The participation form posts to `/api/applications`, which validates the request and forwards it to Google Forms. Responses are stored in Google Forms; the linked Google Sheet is an optional response copy, not a dependency of the website. There is no database, checkout, or booking service. A successful application does not confirm a place.
+
+The client preserves entered details on failure and prevents repeated clicks during submission. The route limits request size, checks browser origins, and includes a honeypot. These are basic protections, not durable rate limiting or deduplication. An uncertain network failure is not retried automatically because Google may already have saved the response.
+
+## Google Forms configuration
+
+- [Edit the event form](https://docs.google.com/forms/d/1tsIfu_1e0izB2uegBdWZXn0BYcH4YZwyCF7t0EXbFbs/edit).
+- In **Responses → More → Get email notifications for new responses**, enable notifications for each organizer account that needs them. The setting is per account. Notifications alert the organizer; they do not send a custom reply to applicants.
+- Keep the form published and accepting responses without a required Google sign-in. Do not enable response summaries for respondents.
+- Public field identifiers, answer values, and the confirmation marker live in `lib/google-form.ts`. If you recreate questions, change option values, or change the confirmation message, update this mapping and verify a clearly labeled test response.
+- The integration uses the Google Forms web submission endpoint, not an official submission API. Google UI or endpoint changes can require maintenance. Success is shown only when Google's visible confirmation matches the configured message.
+- `components/application-form.tsx` owns the bilingual form interaction; `app/api/applications/route.ts` handles submissions. No credentials or Sheets API are required.
 
 ## Assets and attribution
 

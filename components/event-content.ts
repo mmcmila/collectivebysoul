@@ -104,7 +104,7 @@ export const copy = {
     "form.t2": "iptal koşullarını",
     "form.t3": "okudum, kabul ediyorum.",
     "form.note":
-      "“Katıl” dediğinde e-posta uygulaman açılır. Talebin, e-postayı sen gönderdiğinde bize ulaşır; bu işlem rezervasyon onayı değildir.",
+      "Başvurun Google Forms üzerinden ekibimize iletilir. 72 saat içinde sana döneceğiz. Bu işlem rezervasyon onayı değildir.",
     "form.submit": "Katıl",
     "faq.eyebrow": "Sık sorulanlar",
     "faq.title": "Gelmeden önce bilmen gerekenler.",
@@ -255,7 +255,7 @@ export const copy = {
     "form.t2": "cancellation terms",
     "form.t3": ".",
     "form.note":
-      "When you select ‘Join’, your email app opens. We receive your request only after you send the email; this is not a booking confirmation.",
+      "Your application is sent to our team through Google Forms. We will reply within 72 hours. This is not a booking confirmation.",
     "form.submit": "Join",
     "faq.eyebrow": "FAQ",
     "faq.title": "What to know before you come.",

@@ -1,13 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import {
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-  type FormEvent,
-} from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   motion,
   MotionConfig,
@@ -44,6 +38,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { ApplicationForm } from "@/components/application-form";
 import { copy, workshops } from "@/components/event-content";
 
 type Language = keyof typeof copy;
@@ -178,7 +173,6 @@ export function YogaGrove() {
   const [language, setLanguage] = useState<Language>("tr");
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [draftOpened, setDraftOpened] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const hero = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
@@ -206,15 +200,6 @@ export function YogaGrove() {
     document.addEventListener("keydown", close);
     return () => document.removeEventListener("keydown", close);
   }, [menuOpen]);
-  function apply(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const body = ["name", "phone", "email", "instagram", "reference", "party"]
-      .map((key) => `${t(`form.${key}` as CopyKey)}: ${data.get(key) || "-"}`)
-      .join("\n");
-    setDraftOpened(true);
-    window.location.href = `mailto:hello@soulcollective.co?subject=${encodeURIComponent(en ? "One Day on an Island participation" : "One Day on an Island katılım")}&body=${encodeURIComponent(body)}`;
-  }
   function Close() {
     return (
       <DialogClose
@@ -631,69 +616,7 @@ export function YogaGrove() {
             <p>{t("apply.body")}</p>
           </Reveal>
           <Reveal>
-            <form className="application-form" onSubmit={apply}>
-              {(
-                ["name", "phone", "email", "instagram", "reference"] as const
-              ).map((key) => (
-                <div className="field" key={key}>
-                  <label htmlFor={key}>{t(`form.${key}`)}</label>
-                  <input
-                    id={key}
-                    name={key}
-                    type={
-                      key === "email"
-                        ? "email"
-                        : key === "phone"
-                          ? "tel"
-                          : "text"
-                    }
-                    autoComplete={
-                      key === "name"
-                        ? "name"
-                        : key === "email"
-                          ? "email"
-                          : key === "phone"
-                            ? "tel"
-                            : undefined
-                    }
-                    required={["name", "phone", "email"].includes(key)}
-                    placeholder={key === "instagram" ? "@" : undefined}
-                  />
-                </div>
-              ))}
-              <div className="field">
-                <label htmlFor="party">{t("form.party")}</label>
-                <select id="party" name="party">
-                  {(["one", "two", "three"] as const).map((key, i) => (
-                    <option key={key} value={i + 1}>
-                      {t(`form.${key}`)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <label className="form-check form-wide" htmlFor="terms">
-                <input type="checkbox" id="terms" name="terms" required />
-                <span>
-                  {t("form.t1")}{" "}
-                  <a className="inline-link" href="#sss">
-                    {t("form.t2")}
-                  </a>{" "}
-                  {t("form.t3")}
-                </span>
-              </label>
-              <p className="form-note form-wide">{t("form.note")}</p>
-              <Button type="submit" size="lg" className="form-wide">
-                {t("form.submit")}
-                <ArrowRight />
-              </Button>
-              <p role="status" className="form-note form-wide">
-                {draftOpened
-                  ? en
-                    ? "Your email draft is opening. Send it to complete your request."
-                    : "E-posta taslağın açılıyor. Katılım talebini tamamlamak için e-postayı göndermelisin."
-                  : ""}
-              </p>
-            </form>
+            <ApplicationForm language={language} />
           </Reveal>
         </section>
         <section id="sss" className="section shell faq-grid">

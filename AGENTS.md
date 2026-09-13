@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Project overview
 
-This repository is a Next.js App Router frontend for Collective by Soul, presenting One Day on an Island in the original Yogagrove-inspired layout. Keep the implementation simple: reusable components, content arrays, and focused CSS. There is no database, authentication, checkout, or booking backend.
+This repository is a Next.js App Router frontend for Collective by Soul, presenting One Day on an Island in the original Yogagrove-inspired layout. Keep the implementation simple: reusable components, content arrays, and focused CSS. Applications are submitted through a server route to Google Forms. There is no database, authentication, checkout, or booking backend.
 
 ## Package manager
 
@@ -30,14 +30,14 @@ This repository is a Next.js App Router frontend for Collective by Soul, present
 - Preserve the warm cream and forest-green palette, readable contrast, responsive layout, and reduced-motion behavior.
 - Review adjacent section padding together to avoid doubled whitespace. Keep deliberate breathing room around the closing banner.
 - Keep navigation, keyboard focus, dialog titles, and FAQ interactions accessible.
-- Keep demo limitations explicit. Do not imply a booking is confirmed when only an email enquiry is available.
+- Keep application limitations explicit. Google Forms receipt does not confirm a booking. Keep field mappings and confirmation text in `lib/google-form.ts` synchronized with the published form.
 
 ## Validation
 
 - Run `pnpm lint` and `pnpm build` for code or dependency changes.
 - For visual changes, inspect affected sections on desktop (around 1252px wide) and mobile (around 390px wide). Check overflow, spacing, image loading, and text wrapping.
 - For interaction changes, verify the affected menu, dialog, FAQ, or link in the browser and check keyboard operation.
-- There is no test runner configured. Do not claim automated tests passed; report the checks actually performed. Add tests when meaningful behavior warrants them.
+- Run the focused Node tests with `node --experimental-strip-types --test tests/google-form.test.mjs` (Node.js 22.6+). Report the checks actually performed; use clearly labeled synthetic data for live submission checks.
 - Keep documentation aligned with actual scripts, features, and limitations.
 
 ## Working in this repository
