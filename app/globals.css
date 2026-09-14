@@ -1583,11 +1583,13 @@ h4 {
 }
 .field label {
   display: block;
+  min-height: 2lh;
   font-size: 12px;
   margin-bottom: 8px;
 }
 .field input,
 .field select {
+  height: 48px;
   width: 100%;
   min-width: 0;
   border: 1px solid var(--border);
@@ -1729,6 +1731,9 @@ h4 {
   .event-ticket {
     padding: 30px;
   }
+  .field label {
+    min-height: auto;
+  }
   .application-form {
     grid-template-columns: 1fr;
     padding: 24px;
@@ -1745,7 +1750,6 @@ h4 {
   }
 }
 
-/* Application feedback uses the existing form layout. */
 .application-fieldset {
   min-width: 0;
   border: 0;

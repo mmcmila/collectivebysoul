@@ -169,6 +169,23 @@ function Join({
   );
 }
 
+function GalleryClose({ en }: { en: boolean }) {
+  return (
+    <DialogClose
+      render={
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="absolute top-4 right-4"
+        />
+      }
+      aria-label={en ? "Close dialog" : "Pencereyi kapat"}
+    >
+      <X />
+    </DialogClose>
+  );
+}
+
 export function YogaGrove() {
   const [language, setLanguage] = useState<Language>("tr");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -200,22 +217,6 @@ export function YogaGrove() {
     document.addEventListener("keydown", close);
     return () => document.removeEventListener("keydown", close);
   }, [menuOpen]);
-  function Close() {
-    return (
-      <DialogClose
-        render={
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="absolute top-4 right-4"
-          />
-        }
-        aria-label={en ? "Close dialog" : "Pencereyi kapat"}
-      >
-        <X />
-      </DialogClose>
-    );
-  }
   return (
     <MotionConfig reducedMotion="user">
       <a className="skip-link" href="#main">
@@ -443,7 +444,7 @@ export function YogaGrove() {
                       height={2200}
                       sizes="(max-width: 760px) 90vw, 800px"
                     />
-                    <Close />
+                    <GalleryClose en={en} />
                   </DialogContent>
                 </Dialog>
               </Reveal>
@@ -530,7 +531,7 @@ export function YogaGrove() {
                     </DialogHeader>
                     <p>{w.mm}</p>
                     <p className="article-body">{w.b}</p>
-                    <Close />
+                    <GalleryClose en={en} />
                   </DialogContent>
                 </Dialog>
               </Reveal>

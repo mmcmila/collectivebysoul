@@ -114,7 +114,6 @@ export function ApplicationForm({ language }: { language: "tr" | "en" }) {
       if (!response.ok || result.ok !== true)
         throw new Error("Unconfirmed submission");
       setStatus("success");
-      // Retain values on failure; clear personal details only after confirmation.
       form.reset();
       requestAnimationFrame(() => message.current?.focus());
     } catch {

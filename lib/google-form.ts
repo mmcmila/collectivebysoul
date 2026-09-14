@@ -100,8 +100,7 @@ export function buildGooglePayload(application: Application) {
 }
 
 export function isGoogleConfirmation(html: string) {
-  // An invalid form can contain the confirmation text in its embedded configuration.
-  // Only accept the visible confirmation, never script contents or an editable form.
+  // Ignore embedded confirmation text on invalid forms.
   const visibleHtml = html
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
     .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "");
