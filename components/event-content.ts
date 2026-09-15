@@ -1,6 +1,11 @@
 // Event copy and photography preserved from the latest event landing page.
 export const copy = {
   tr: {
+    "footer.postcardTitle": "Şehirden bir vapur uzaklıkta.",
+    "footer.collageTitle": "Bir gün. Bir ada. Birlikte.",
+    "footer.invitation": "Deniz yolculuğu, yeni karşılaşmalar ve kendine ayırdığın bir gün. Büyükada’da buluşalım.",
+    "footer.watercolorAlt": "Büyükada kıyısının, tarihi iskelenin ve vapurun suluboya illüstrasyonu",
+    "footer.collageAlt": "Büyükada’nın ahşap evlerini, bisikleti, çamları ve vapuru bir araya getiren kâğıt kolaj illüstrasyonu",
     "a11y.skip": "İçeriğe geç",
     "nav.day": "Gün",
     "nav.place": "Mekân",
@@ -149,6 +154,11 @@ export const copy = {
     "footer.return": "Dönüş 00:30",
   },
   en: {
+    "footer.postcardTitle": "A ferry ride away from the city.",
+    "footer.collageTitle": "One day. One island. Together.",
+    "footer.invitation": "A journey by sea, new connections, and a day to call your own. See you on Büyükada.",
+    "footer.watercolorAlt": "Watercolor illustration of Büyükada’s waterfront, historic ferry terminal and passenger ferry",
+    "footer.collageAlt": "Paper collage illustration of Büyükada’s timber villas, bicycle, pine trees and ferry",
     "a11y.skip": "Skip to content",
     "a11y.language": "Language selection",
     "nav.day": "The day",

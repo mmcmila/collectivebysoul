@@ -1780,3 +1780,121 @@ h4 {
 .application-status:empty {
   display: none;
 }
+
+/* Illustrated homepage footer alternatives. */
+.island-footer {
+  padding-top: 88px;
+  overflow: hidden;
+  color: #253d2c;
+  background: #f7f5ef;
+}
+.island-footer-invitation {
+  margin-bottom: 64px;
+}
+.island-footer-invitation .eyebrow {
+  color: #52644f;
+  margin-bottom: 20px;
+}
+.island-footer-invitation h2 {
+  max-width: 720px;
+  font-size: clamp(36px, 4.5vw, 64px);
+  line-height: 1.12;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+.island-footer-invitation-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 32px;
+  margin-top: 28px;
+}
+.island-footer-invitation-body p {
+  max-width: 470px;
+  color: #52644f;
+  line-height: 1.8;
+}
+.island-footer-invitation-body > a {
+  flex-shrink: 0;
+}
+.island-footer .footer-grid {
+  gap: 36px;
+  padding-top: 36px;
+  border-top: 1px solid #253d2c26;
+}
+.island-footer .footer-grid a:not(.brand),
+.island-footer .footer-grid p {
+  color: #52644f;
+}
+.island-footer .footer-grid a:hover {
+  color: #253d2c;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.island-footer .footer-bottom {
+  color: #52644f;
+  border-color: #253d2c26;
+  margin-top: 32px;
+}
+.island-footer a:focus-visible {
+  outline: 2px solid #253d2c;
+  outline-offset: 5px;
+}
+.island-footer-art {
+  margin-top: 12px;
+}
+.island-footer-art img {
+  display: block;
+  width: 100%;
+  height: auto;
+  mask-image: linear-gradient(to bottom, transparent, black 8%);
+}
+.island-footer-collage {
+  padding-top: 104px;
+}
+.island-footer-collage .island-footer-invitation {
+  text-align: center;
+  margin-bottom: 88px;
+}
+.island-footer-collage .island-footer-invitation h2 {
+  max-width: 760px;
+  margin-inline: auto;
+  font-size: clamp(40px, 6vw, 80px);
+}
+.island-footer-collage .island-footer-invitation-body {
+  flex-direction: column;
+  gap: 24px;
+}
+.island-footer-collage .footer-grid {
+  border-top: 0;
+  padding-top: 0;
+}
+.island-footer-collage .island-footer-art {
+  margin-top: 24px;
+}
+@media (max-width: 600px) {
+  .island-footer,
+  .island-footer-collage {
+    padding-top: 56px;
+  }
+  .island-footer-invitation,
+  .island-footer-collage .island-footer-invitation {
+    margin-bottom: 48px;
+  }
+  .island-footer-invitation-body {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 24px;
+  }
+  .island-footer-collage .island-footer-invitation-body {
+    align-items: center;
+  }
+  .island-footer .footer-grid {
+    gap: 32px 20px;
+  }
+  .island-footer-art img {
+    width: 180%;
+    max-width: none;
+    margin-left: -40%;
+  }
+}

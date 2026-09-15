@@ -186,7 +186,11 @@ function GalleryClose({ en }: { en: boolean }) {
   );
 }
 
-export function YogaGrove() {
+export function YogaGrove({
+  footerVariant = "original",
+}: {
+  footerVariant?: "original" | "watercolor" | "collage";
+}) {
   const [language, setLanguage] = useState<Language>("tr");
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -663,8 +667,21 @@ export function YogaGrove() {
           </Reveal>
         </section>
       </main>
-      <footer className="footer">
+      <footer
+        id="footer"
+        className={cn("footer", footerVariant !== "original" && ["island-footer", `island-footer-${footerVariant}`])}
+      >
         <div className="shell">
+          {footerVariant !== "original" && (
+            <div className="island-footer-invitation">
+              <p className="eyebrow">{t("closing.eyebrow")}</p>
+              <h2>{t(footerVariant === "watercolor" ? "footer.postcardTitle" : "footer.collageTitle")}</h2>
+              <div className="island-footer-invitation-body">
+                <p>{t("footer.invitation")}</p>
+                <Join>{t("closing.cta")}</Join>
+              </div>
+            </div>
+          )}
           <div className="footer-grid">
             <div className="footer-about">
               <Brand />
@@ -703,14 +720,27 @@ export function YogaGrove() {
               </a>
             </div>
           </div>
-          <div className="footer-wordmark" aria-hidden="true">
-            soul collective
-          </div>
+          {footerVariant === "original" && (
+            <div className="footer-wordmark" aria-hidden="true">
+              soul collective
+            </div>
+          )}
           <div className="footer-bottom">
             <p>© 2026 Soul Collective</p>
             <span>ONE DAY ON AN ISLAND</span>
           </div>
         </div>
+        {footerVariant !== "original" && (
+          <div className="island-footer-art">
+            <Image
+              src={`/images/footer-alternatives/buyukada-${footerVariant}.png`}
+              alt={t(footerVariant === "watercolor" ? "footer.watercolorAlt" : "footer.collageAlt")}
+              width={2172}
+              height={724}
+              sizes="100vw"
+            />
+          </div>
+        )}
       </footer>
     </MotionConfig>
   );
