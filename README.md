@@ -42,6 +42,7 @@ For CI and clean checkouts, use `pnpm install --frozen-lockfile`, then `pnpm lin
 | ----------------------------------- | ------------------------------------------------------ |
 | `app/page.tsx`                      | Server-rendered page entry point                       |
 | `app/layout.tsx`                    | Root layout, metadata, and local fonts                 |
+| `app/favicon.ico`, `app/icon.png`, `app/apple-icon.png` | Brand icons via Next.js file conventions |
 | `components/yoga-grove.tsx`         | Event sections, animation helpers, and dialogs         |
 | `components/event-content.ts`       | Turkish and English event copy and workshop data       |
 | `public/assets/web/`                | Current event photography                              |
@@ -58,7 +59,7 @@ For CI and clean checkouts, use `pnpm install --frozen-lockfile`, then `pnpm lin
 
 Edit bilingual copy and workshop information in `components/event-content.ts` and section composition in `components/yoga-grove.tsx`. Update metadata in `app/layout.tsx` and styles in `app/globals.css`. The event ticket covers on-site activities and hospitality; transport is not listed as a ticket inclusion. The FAQ links to ferry timetables and explains optional group sea taxi arrangements and the İBB Deniz Taksi app. The older copy and audit in `docs/` are historical references.
 
-The page preserves the original full-width hero, reveal animations, sticky stacking photo cards, workshop cards, host portraits, FAQ layout, closing banner, and large footer wordmark. Event-specific additions include venue and boat photo dialogs, music listings, a single Crossing Pass, and a participation form. Motion and CSS respect reduced-motion preferences.
+The page preserves the original full-width hero, reveal animations, sticky stacking photo cards, workshop cards, host portraits, FAQ layout, closing banner, and large footer wordmark. Event-specific additions include venue photo dialogs, the animated Tugen music block under the workshops, a single Island Pass with a guest portal entry, and a participation form. Motion and CSS respect reduced-motion preferences.
 
 The homepage is served by the App Router. The previous `/index.html` address redirects to `/`, including existing section anchors. Turkish is the initial language; the TR/EN control switches the copy and document language. Social image URLs use `VERCEL_PROJECT_PRODUCTION_URL` when deployed on Vercel, and localhost during local development.
 
@@ -66,7 +67,7 @@ Check desktop and mobile layouts and keyboard interactions after changes. Run `p
 
 ## Current scope
 
-The participation form posts to `/api/applications`, which validates the request and forwards it to Google Forms. Responses are stored in Google Forms; the linked Google Sheet is an optional response copy, not a dependency of the website. There is no database, checkout, or booking service. A successful application does not confirm a place.
+The participation form posts to `/api/applications`, which validates the request and forwards it to Google Forms. Responses are stored in Google Forms; the linked Google Sheet is an optional response copy, not a dependency of the website. The landing page has no checkout or booking service; the guest portal below uses PostgreSQL only for issued tickets. A successful application does not confirm a place.
 
 The client preserves entered details on failure and prevents repeated clicks during submission. The route limits request size, checks browser origins, and includes a honeypot. These are basic protections, not durable rate limiting or deduplication. An uncertain network failure is not retried automatically because Google may already have saved the response.
 

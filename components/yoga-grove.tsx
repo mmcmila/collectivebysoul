@@ -1,7 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import {
   motion,
   MotionConfig,
@@ -43,11 +50,11 @@ import { copy, workshops } from "@/components/event-content";
 
 type Language = keyof typeof copy;
 type CopyKey = keyof typeof copy.en;
+const email = "collectivebysoul@gmail.com";
 const navigation = [
   ["day", "gun"],
   ["place", "mekan"],
   ["workshops", "atolyeler"],
-  ["music", "muzik"],
   ["tickets", "biletler"],
   ["faq", "sss"],
 ] as const;
@@ -57,19 +64,36 @@ const gallery = [
     "Gün batımında havuz ve bahçe",
     "Pool and garden at sunset",
   ],
-  ["web/house-5.webp", "Taş kayıkhane ve iskele", "Stone boathouse and pier"],
+  [
+    "web/house-5.webp",
+    "Deniz kenarındaki taş yapı ve teras",
+    "Stone building and terrace by the sea",
+  ],
   [
     "web/house-3.webp",
     "Palmiye ağaçları önünde havuz",
     "Pool beneath the palm trees",
   ],
-  [
-    "web/boat.webp",
-    "Adaya giden özel teknenin ön güvertesi",
-    "Bow of the private boat to the island",
-  ],
-  ["web/boat_night.webp", "Gece dönüş teknesi", "The return boat at night"],
 ];
+const flowPhotos = [
+  [
+    "web/house-3.webp",
+    "Büyükada’daki evin bahçesi ve havuzu",
+    "The garden and pool of the house on Büyükada",
+  ],
+  ["web/dusk.webp", "Havuz ve deniz manzarası", "Pool and sea view"],
+  [
+    "web/house-4.webp",
+    "Gece ışıklarıyla ev ve havuz",
+    "The house and pool lit up at night",
+  ],
+];
+// Deterministic equaliser bars so server and client render the same markup.
+const musicBars = Array.from({ length: 26 }, (_, i) => ({
+  "--s": 0.33 + ((i * 37) % 59) / 100,
+  "--d": `${0.59 + ((i * 23) % 57) / 100}s`,
+  "--o": `-${((i * 41) % 118) / 100}s`,
+}));
 
 function Reveal({
   children,
@@ -136,10 +160,10 @@ function Brand() {
   return (
     <a href="#top" className="brand" aria-label="Soul Collective">
       <Image
-        src="/assets/mark.svg"
+        src="/assets/brand-mark.png"
         alt=""
-        width={29}
-        height={33}
+        width={32}
+        height={40}
         className="brand-mark"
       />
       <span>Soul Collective</span>
@@ -244,6 +268,7 @@ export function YogaGrove({
                 {t(`nav.${key}`)}
               </a>
             ))}
+            <Link href="/misafir">{t("nav.guest")}</Link>
           </nav>
           <div className="nav-controls">
             <div
@@ -295,6 +320,10 @@ export function YogaGrove({
             className="mobile-nav"
             aria-label={en ? "Mobile navigation" : "Mobil navigasyon"}
           >
+            <Link href="/misafir">
+              {t("nav.guest")}
+              <ArrowUpRight aria-hidden="true" />
+            </Link>
             {navigation.map(([key, id]) => (
               <a key={id} href={`#${id}`} onClick={() => setMenuOpen(false)}>
                 {t(`nav.${key}`)}
@@ -350,9 +379,8 @@ export function YogaGrove({
               <div className="event-facts">
                 {[
                   [t("facts.date"), t("facts.day")],
-                  ["12:30 · 13:00", t("facts.departure")],
-                  ["50", t("facts.people")],
-                  ["00:30", t("facts.return")],
+                  ["Büyükada", t("facts.location")],
+                  ["30", t("facts.people")],
                 ].map(([value, label]) => (
                   <div key={label}>
                     <strong>{value}</strong>
@@ -396,8 +424,8 @@ export function YogaGrove({
                 file="web/g4.webp"
                 alt={
                   en
-                    ? "The villa’s garden facing the sea"
-                    : "Villanın denize bakan bahçesi"
+                    ? "The garden of the villa on Büyükada, facing the sea"
+                    : "Büyükada’daki villanın denize bakan bahçesi"
                 }
                 className="about-photo"
               />
@@ -408,7 +436,7 @@ export function YogaGrove({
               <p>{t("place.body1")}</p>
               <p>{t("place.body2")}</p>
               <div className="stats">
-                {["50", "6", "12"].map((n, i) => (
+                {["30", "6"].map((n, i) => (
                   <div key={n}>
                     <strong>{n}</strong>
                     <span>{t(`place.stat${i + 1}` as CopyKey)}</span>
@@ -465,30 +493,28 @@ export function YogaGrove({
             </Reveal>
           </div>
           <div className="method-stack">
-            {["web/boat.webp", "web/dusk.webp", "web/house-4.webp"].map(
-              (file, i) => (
-                <motion.article
-                  key={file}
-                  className="method-card"
-                  style={{
-                    top: 115 + i * 18,
-                    rotate: reduced ? 0 : i === 1 ? 2 : -2,
-                  }}
-                  initial={{ opacity: 0, y: reduced ? 0 : 60 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.15 }}
-                  transition={{ duration: 0.7 }}
-                >
-                  <Photo file={file} alt={t(`flow.s${i + 1}t` as CopyKey)} />
-                  <div className="method-shade" />
-                  <span className="method-number">0{i + 1}</span>
-                  <div className="method-caption">
-                    <h3>{t(`flow.s${i + 1}t` as CopyKey)}</h3>
-                    <p>{t(`flow.s${i + 1}b` as CopyKey)}</p>
-                  </div>
-                </motion.article>
-              ),
-            )}
+            {flowPhotos.map(([file, trAlt, enAlt], i) => (
+              <motion.article
+                key={file}
+                className="method-card"
+                style={{
+                  top: 115 + i * 18,
+                  rotate: reduced ? 0 : i === 1 ? 2 : -2,
+                }}
+                initial={{ opacity: 0, y: reduced ? 0 : 60 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.15 }}
+                transition={{ duration: 0.7 }}
+              >
+                <Photo file={file} alt={en ? enAlt : trAlt} />
+                <div className="method-shade" />
+                <span className="method-number">0{i + 1}</span>
+                <div className="method-caption">
+                  <h3>{t(`flow.s${i + 1}t` as CopyKey)}</h3>
+                  <p>{t(`flow.s${i + 1}b` as CopyKey)}</p>
+                </div>
+              </motion.article>
+            ))}
           </div>
         </section>
         <section id="atolyeler" className="section shell">
@@ -541,6 +567,24 @@ export function YogaGrove({
               </Reveal>
             ))}
           </div>
+          <Reveal>
+            <div id="muzik" className="music-feature">
+              <div>
+                <Label>{t("music.eyebrow")}</Label>
+                <div className="music-mark">
+                  <h3>TUGEN</h3>
+                  <div className="music-wave" aria-hidden="true">
+                    {musicBars.map((style, i) => (
+                      <i key={i} style={style as CSSProperties} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <p>
+                <strong>{t("music.lead")}</strong> {t("music.body")}
+              </p>
+            </div>
+          </Reveal>
         </section>
         <section id="ev-sahipleri" className="section shell">
           <Reveal className="section-heading centered">
@@ -552,7 +596,7 @@ export function YogaGrove({
             {[
               ["Dr. Oğuz Öner", "oguz", "web/oguz.webp"],
               ["Şeyma Çavdur", "seyma", "web/seyma.webp"],
-              ["Bisou Me", "bisou", "web/w5.webp"],
+              ["Deniz Mısır", "deniz", "web/w5.webp"],
             ].map(([name, key, file], i) => (
               <Reveal key={key} delay={i * 0.08}>
                 <Photo file={file} alt={name} className="teacher-photo" />
@@ -560,31 +604,6 @@ export function YogaGrove({
                 <p>{t(`hosts.${key}` as CopyKey)}</p>
               </Reveal>
             ))}
-          </div>
-        </section>
-        <section id="muzik" className="benefits section">
-          <div className="shell music-grid">
-            <Reveal>
-              <Label>{t("music.time")}</Label>
-              <h2>{t("music.title")}</h2>
-              <p>{t("music.tba")}</p>
-            </Reveal>
-            <Reveal>
-              <div className="music-heading">
-                <h3>{t("music.djs")}</h3>
-                <span>{t("music.order")}</span>
-              </div>
-              <ol className="music-list" aria-label={t("music.listLabel")}>
-                {["Emre Arısev", "Manthem", "Özlem Atalay", "Tugen"].map(
-                  (name, i) => (
-                    <li key={name}>
-                      <span>0{i + 1}</span>
-                      {name}
-                    </li>
-                  ),
-                )}
-              </ol>
-            </Reveal>
           </div>
         </section>
         <section id="biletler" className="section shell">
@@ -596,22 +615,38 @@ export function YogaGrove({
           <Reveal className="price-card price-featured event-ticket">
             <div>
               <Label>{t("tickets.tag")}</Label>
-              <h3>The Crossing Pass</h3>
+              <h3>Island Pass</h3>
               <p>{t("tickets.intro")}</p>
               <Join light>{t("tickets.cta")}</Join>
             </div>
             <div>
               <h3>{t("tickets.includes")}</h3>
               <ul>
-                {[1, 2, 3, 4, 5, 6].map((i) => (
+                {[1, 2, 3, 4].map((i) => (
                   <li key={i}>
                     <Check aria-hidden="true" />
-                    {t(`tickets.i${i}` as CopyKey)}
+                    <span>
+                      {t(`tickets.i${i}` as CopyKey)}
+                      {i === 2 && <small>{t("tickets.foodDetail")}</small>}
+                    </span>
                   </li>
                 ))}
               </ul>
               <p>{t("tickets.note")}</p>
             </div>
+          </Reveal>
+          <Reveal className="guest-entry">
+            <div>
+              <h3>{t("guest.title")}</h3>
+              <p>{t("guest.body")}</p>
+            </div>
+            <Link
+              href="/misafir"
+              className={buttonVariants({ variant: "outline", size: "lg" })}
+            >
+              {t("guest.cta")}
+              <ArrowUpRight aria-hidden="true" />
+            </Link>
           </Reveal>
         </section>
         <section id="basvuru" className="section shell application-grid">
@@ -629,20 +664,35 @@ export function YogaGrove({
             <Label>{t("faq.eyebrow")}</Label>
             <h2>{t("faq.title")}</h2>
             <p>
-              <a className="inline-link" href="mailto:hello@soulcollective.co">
-                hello@soulcollective.co
+              <a className="inline-link" href={`mailto:${email}`}>
+                {email}
               </a>
             </p>
           </Reveal>
           <Reveal>
             <Accordion defaultValue={["faq-1"]}>
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
                 <AccordionItem key={i} value={`faq-${i}`}>
                   <AccordionTrigger>
                     {t(`faq.q${i}` as CopyKey)}
                   </AccordionTrigger>
                   <AccordionContent>
-                    {t(`faq.a${i}` as CopyKey)}
+                    {i === 9 ? (
+                      <>
+                        {t("faq.a9start")}
+                        <a
+                          className="inline-link"
+                          href="https://www.adalar.ahmetmogut.com/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {t("faq.a9link")}
+                        </a>
+                        {t("faq.a9end")}
+                      </>
+                    ) : (
+                      t(`faq.a${i}` as CopyKey)
+                    )}
                   </AccordionContent>
                 </AccordionItem>
               ))}
@@ -706,18 +756,12 @@ export function YogaGrove({
                 </a>
               ))}
               <a href="#basvuru">{t("nav.apply")}</a>
+              <Link href="/misafir">{t("nav.guest")}</Link>
             </div>
             <div>
               <h4>{t("footer.date")}</h4>
               <p>Büyükada, İstanbul</p>
-              <p>
-                {t("footer.boat")}
-                <br />
-                {t("footer.return")}
-              </p>
-              <a href="mailto:hello@soulcollective.co">
-                hello@soulcollective.co
-              </a>
+              <a href={`mailto:${email}`}>{email}</a>
             </div>
           </div>
           {footerVariant === "original" && (

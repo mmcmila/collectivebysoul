@@ -1,4 +1,4 @@
-> Historical reference: this document predates the removal of event transport. The current source of truth is `public/index.html` (Turkish and English). Transport inclusions, departure schedules, related images and the former pass name in this document no longer apply.
+> Historical reference: this document predates the removal of event transport. The current source of truth is `components/event-content.ts` (Turkish and English). Transport inclusions, departure schedules, related images and the former pass name in this document no longer apply.
 
 # One Day on an Island — website copy
 

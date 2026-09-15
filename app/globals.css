@@ -595,8 +595,7 @@ h1 {
 .class-arrow svg {
   width: 19px;
 }
-.class-card:hover img,
-.journal-card:hover img {
+.class-card:hover img {
   transform: scale(1.045);
 }
 .class-card:hover .class-arrow {
@@ -608,35 +607,6 @@ h1 {
 .class-card p {
   font-size: 14px;
   color: var(--muted-foreground);
-}
-.benefits {
-  background: #edf0e5;
-  margin-top: 35px;
-}
-.benefits .section-label {
-  background: #fefdfb;
-}
-.benefits-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
-}
-.benefit {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  padding: 25px 22px;
-  border: 1px solid #d6dccb;
-  border-radius: 15px;
-}
-.benefit svg {
-  width: 28px;
-  height: 28px;
-  flex-shrink: 0;
-}
-.benefit h3 {
-  font-size: 16px;
-  letter-spacing: -0.3px;
 }
 .teachers-grid {
   display: grid;
@@ -655,76 +625,9 @@ h1 {
   color: var(--muted-foreground);
   font-size: 15px;
 }
-.center-action {
-  display: flex;
-  justify-content: center;
-  margin-top: 42px;
-}
-.section.testimonials {
-  background: #f5f4ef;
-  padding-bottom: clamp(40px, 5vw, 64px);
-}
-.testimonials + #pricing {
-  padding-top: clamp(40px, 5vw, 64px);
-}
-.featured-quote {
-  display: grid;
-  grid-template-columns: 0.8fr 1.2fr;
-  background: var(--background);
-  border-radius: 22px;
-  overflow: hidden;
-}
-.featured-quote > .photo {
-  min-height: 370px;
-}
-.featured-quote > div:last-child {
-  padding: 50px 55px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-.stars {
-  color: #667548;
-  letter-spacing: 4px;
-  font-size: 18px;
-}
-.featured-quote blockquote {
-  font-size: 28px;
-  line-height: 1.45;
-  letter-spacing: -0.65px;
-  margin: 24px 0 28px;
-}
 h4 {
   font-size: 16px;
   font-weight: 500;
-}
-.featured-quote p,
-.quote > p {
-  font-size: 13px;
-  color: var(--muted-foreground);
-  margin-top: 5px;
-}
-.quotes-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  margin-top: 24px;
-}
-.quote {
-  padding: 30px;
-  border: 1px solid var(--border);
-  border-radius: 18px;
-}
-.quote blockquote {
-  font-size: 15px;
-  line-height: 1.7;
-  margin: 20px 0 28px;
-  min-height: 100px;
-}
-.pricing-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
 }
 .price-card {
   border: 1px solid var(--border);
@@ -742,26 +645,6 @@ h4 {
   font-size: 14px;
   color: var(--muted-foreground);
   margin-top: 8px;
-}
-.price {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-}
-.price sup {
-  font-size: 27px;
-  align-self: flex-start;
-  margin-top: 12px;
-}
-.price strong {
-  font-size: 64px;
-  font-weight: 500;
-  letter-spacing: -3px;
-  line-height: 1.2;
-}
-.price span {
-  font-size: 13px;
-  opacity: 0.75;
 }
 .price-card > [data-slot="button"] {
   width: 100%;
@@ -830,41 +713,6 @@ h4 {
   color: var(--muted-foreground);
   font-size: 14px;
   line-height: 1.8;
-}
-.section.journal-section {
-  border-top: 1px solid var(--border);
-  padding-bottom: clamp(40px, 5vw, 64px);
-}
-.journal-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 28px;
-}
-.journal-card {
-  width: 100%;
-  text-align: left;
-}
-.journal-card .photo {
-  height: 250px;
-  border-radius: 16px;
-}
-.journal-card > span {
-  display: block;
-  font-size: 10px;
-  letter-spacing: 1.3px;
-  margin-top: 22px;
-  color: var(--muted-foreground);
-}
-.journal-card h3 {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  font-size: 21px;
-  margin-top: 10px;
-}
-.journal-card h3 svg {
-  flex-shrink: 0;
-  width: 21px;
 }
 .cta {
   min-height: 450px;
@@ -965,15 +813,6 @@ h4 {
   width: 14px;
   height: 14px;
 }
-.dialog-symbol {
-  width: 45px;
-  height: 45px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: var(--secondary);
-  margin-bottom: 12px;
-}
 [data-slot="dialog-title"] {
   font-size: 25px;
   line-height: 1.3;
@@ -984,46 +823,9 @@ h4 {
   max-height: 85svh;
   overflow-y: auto;
 }
-.dialog-phone {
-  text-align: center;
-  font-size: 13px;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
 .article-body {
   font-size: 15px;
   line-height: 1.9;
-}
-.schedule-list {
-  display: flex;
-  flex-direction: column;
-}
-.schedule-list button {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  text-align: left;
-  gap: 20px;
-  padding-block: 17px;
-  border-bottom: 1px solid var(--border);
-}
-.schedule-list button:hover {
-  color: #718354;
-}
-.schedule-list strong,
-.schedule-list span {
-  display: block;
-}
-.schedule-list strong {
-  font-weight: 500;
-}
-.schedule-list span {
-  color: var(--muted-foreground);
-  font-size: 12px;
-  margin-top: 5px;
-}
-.schedule-list svg {
-  width: 19px;
 }
 @media (min-width: 1600px) {
   .hero-inner {
@@ -1075,17 +877,8 @@ h4 {
   .teacher-photo {
     height: 360px;
   }
-  .featured-quote > div:last-child {
-    padding: 35px;
-  }
-  .featured-quote blockquote {
-    font-size: 23px;
-  }
   .price-card {
     padding: 26px;
-  }
-  .price strong {
-    font-size: 54px;
   }
   .faq-grid {
     gap: 50px;
@@ -1177,9 +970,6 @@ h4 {
     font-size: 34px;
     letter-spacing: -1.25px;
   }
-  .desktop-break {
-    display: none;
-  }
   .section-heading {
     margin-bottom: 36px;
   }
@@ -1270,22 +1060,6 @@ h4 {
   .class-card p {
     font-size: 12px;
   }
-  .benefits {
-    margin-top: 0;
-  }
-  .benefits-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-  .benefit {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 20px;
-    gap: 15px;
-  }
-  .benefit h3 {
-    font-size: 14px;
-  }
   .teachers-grid {
     gap: 14px;
   }
@@ -1300,31 +1074,8 @@ h4 {
   .teachers-grid p {
     font-size: 11px;
   }
-  .featured-quote {
-    grid-template-columns: 1fr;
-  }
-  .featured-quote > .photo {
-    height: 320px;
-  }
-  .featured-quote > div:last-child {
-    padding: 28px;
-  }
-  .quotes-grid {
-    grid-template-columns: 1fr;
-    gap: 15px;
-  }
-  .quote blockquote {
-    min-height: auto;
-  }
-  .pricing-grid {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
   .price-card {
     padding: 30px;
-  }
-  .price strong {
-    font-size: 64px;
   }
   .faq-grid {
     grid-template-columns: 1fr;
@@ -1339,16 +1090,6 @@ h4 {
   [data-slot="accordion-trigger"] {
     padding: 20px;
     font-size: 14px;
-  }
-  .journal-grid {
-    grid-template-columns: 1fr;
-    gap: 34px;
-  }
-  .journal-card .photo {
-    height: 280px;
-  }
-  .journal-card h3 {
-    font-size: 22px;
   }
   .cta {
     min-height: 410px;
@@ -1483,7 +1224,7 @@ h4 {
 }
 .venue-gallery {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
   margin-top: 40px;
 }
@@ -1522,36 +1263,68 @@ h4 {
 .workshop-dialog[data-slot="dialog-content"] {
   max-width: min(620px, calc(100% - 32px));
 }
-.music-grid,
+.music-feature {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: clamp(32px, 7vw, 100px);
+  margin-top: 60px;
+  padding: clamp(30px, 5vw, 56px);
+  border-radius: 20px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  scroll-margin-top: 100px;
+}
+.music-mark {
+  display: flex;
+  flex-direction: column;
+  width: fit-content;
+  margin-top: 22px;
+}
+.music-mark h3 {
+  font-size: clamp(48px, 7vw, 80px);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+.music-wave {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  height: clamp(22px, 3vw, 30px);
+  margin-top: 14px;
+}
+.music-wave i {
+  width: 3px;
+  height: 100%;
+  border-radius: 2px;
+  background: #d9dfc9;
+  transform: scaleY(var(--s));
+  transform-origin: bottom;
+  animation: music-eq var(--d) ease-in-out var(--o) infinite alternate;
+}
+@keyframes music-eq {
+  from {
+    transform: scaleY(0.18);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+.music-feature p {
+  max-width: 52ch;
+  font-size: 18px;
+  line-height: 1.8;
+  color: #f0ebe0b3;
+}
+.music-feature strong {
+  color: var(--primary-foreground);
+  font-weight: 500;
+}
 .application-grid {
   display: grid;
   grid-template-columns: 0.85fr 1.15fr;
   gap: 100px;
-}
-.music-grid h2 {
-  margin: 22px 0;
-}
-.music-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.music-list {
-  list-style: none;
-  padding: 0;
-  margin-top: 16px;
-}
-.music-list li {
-  display: flex;
-  align-items: center;
-  gap: 28px;
-  border-bottom: 1px solid #d6dccb;
-  padding: 20px 0;
-  font-size: 26px;
-}
-.music-list li span {
-  font-size: 12px;
-  color: var(--muted-foreground);
 }
 .event-ticket {
   display: grid;
@@ -1569,8 +1342,36 @@ h4 {
 .event-ticket ul {
   margin-top: 24px;
 }
+.event-ticket li {
+  align-items: flex-start;
+}
 .event-ticket li svg {
   flex-shrink: 0;
+  margin-top: 3px;
+}
+.event-ticket li small {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #f0ebe0b3;
+}
+.guest-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 24px;
+  padding: 28px 48px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+.guest-entry h3 {
+  font-size: 22px;
+  margin-bottom: 6px;
+}
+.guest-entry p {
+  font-size: 14px;
+  color: var(--muted-foreground);
 }
 .application-form {
   display: grid;
@@ -1722,11 +1523,19 @@ h4 {
   .method-card {
     height: 540px;
   }
-  .music-grid,
   .application-grid,
-  .event-ticket {
+  .event-ticket,
+  .music-feature {
     grid-template-columns: 1fr;
     gap: 35px;
+  }
+  .music-feature {
+    margin-top: 40px;
+  }
+  .guest-entry {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 24px;
   }
   .event-ticket {
     padding: 30px;
@@ -1746,7 +1555,7 @@ h4 {
 @media (max-width: 760px) {
   .brand-mark {
     width: 25px;
-    height: 29px;
+    height: 31px;
   }
 }
 

@@ -18,16 +18,14 @@ export const metadata: Metadata = {
       ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
       : "http://localhost:3000",
   ),
-  icons: { icon: "/assets/mark.svg" },
   openGraph: {
     title: "Leave the city behind.",
-    description:
-      "One Day on an Island · Chapter I: The Crossing · 19 Eylül 2026 · Büyükada",
+    description: "One Day on an Island · Chapter I · 19 Eylül 2026 · Büyükada",
     images: ["/assets/web/hero.webp"],
   },
   title: "One Day on an Island — 19 Eylül 2026, Büyükada",
   description:
-    "Elli kişi, Büyükada’da denize açılan bir ev ve öğleden gece yarısına uzanan bir gün: atölyeler, havuz, müzik, yemek ve deniz yolculuğu.",
+    "Otuz kişi, Büyükada’da denize açılan bir ev ve öğleden gece yarısına uzanan bir gün: atölyeler, havuz ve yemek.",
 };
 
 export default function RootLayout({

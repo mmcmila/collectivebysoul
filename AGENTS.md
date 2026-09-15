@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Project overview
 
-This repository is a Next.js App Router frontend for Collective by Soul, presenting One Day on an Island in the original Yogagrove-inspired layout. Keep the implementation simple: reusable components, content arrays, and focused CSS. Applications are submitted through a server route to Google Forms. There is no database, authentication, checkout, or booking backend.
+This repository is a Next.js App Router frontend for Collective by Soul, presenting One Day on an Island in the original Yogagrove-inspired layout. Keep the implementation simple: reusable components, content arrays, and focused CSS. Applications are submitted through a server route to Google Forms. The `/misafir` guest portal and `/yonetim` management console use server-side PostgreSQL access; there is no checkout or payment integration. The static `public/index.html` homepage was removed; do not reintroduce static HTML pages or rewrites.
 
 ## Package manager
 
