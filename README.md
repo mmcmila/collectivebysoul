@@ -50,7 +50,7 @@ For CI and clean checkouts, use `pnpm install --frozen-lockfile`, then `pnpm lin
 | `components.json`                   | shadcn configuration and aliases                       |
 | `app/globals.css`                   | Design tokens, layouts, spacing, and responsive styles |
 | `app/fonts/`                        | Self-hosted Poppins fonts and their license            |
-| `public/images/`                    | Reference imagery served locally                       |
+| `public/images/footer-alternatives/` | Illustrated footer artwork for `/home-01` and `/home-02` |
 | `scripts/check-package-manager.mjs` | pnpm install guard                                     |
 | `AGENTS.md`                         | Repository guidance for coding agents                  |
 | `CLAUDE.md`                         | Imports AGENTS.md to keep guidance in one place        |
@@ -82,7 +82,7 @@ The client preserves entered details on failure and prevents repeated clicks dur
 
 ## Assets and attribution
 
-Current event copy and photography are preserved from the event landing page. Original reference imagery remains in `public/images/` for historical reference. Poppins is distributed under the [SIL Open Font License](app/fonts/OFL.txt) and is hosted locally, so builds do not need a Google Fonts connection.
+Current event copy and photography are preserved from the event landing page. Only optimised photography that the site uses is kept in `public/assets/web/`; add new images there and reference them from components. Poppins is distributed under the [SIL Open Font License](app/fonts/OFL.txt) and is hosted locally, so builds do not need a Google Fonts connection.
 
 ## Guest planning portal
 

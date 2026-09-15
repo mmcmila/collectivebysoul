@@ -749,7 +749,7 @@ h4 {
 }
 .footer {
   padding-top: 80px;
-  background: #253d2c url("/images/footer.png") center/cover;
+  background: #253d2c;
   color: #f0ebe0;
 }
 .footer-grid {
@@ -1421,9 +1421,6 @@ h4 {
 .form-note {
   font-size: 12px;
   color: var(--muted-foreground);
-}
-.footer {
-  background-image: none;
 }
 .footer-wordmark {
   font-size: clamp(60px, 12vw, 190px);
