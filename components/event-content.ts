@@ -79,7 +79,6 @@ export const copy = {
     "tickets.tag": "Günün tamamı dahil",
     "tickets.intro":
       "Büyükada’da bir ev, yaratıcı atölyeler ve öğleden geceye birlikte geçireceğimiz bir gün.",
-    "tickets.cta": "Katıl",
     "tickets.includes": "Biletine dahil",
     "tickets.i1": "Tüm atölyelere erişim",
     "tickets.i2": "Bite Foods ikramları",
@@ -146,7 +145,6 @@ export const copy = {
     "closing.title": "Adada buluşalım.",
     "closing.body":
       "Katılım ya da programla ilgili aklına takılan bir şey varsa bize yaz. Gerçek bir insan cevap verecek.",
-    "closing.cta": "Katıl",
     "footer.about":
       "Soul Collective, birlikte vakit geçirmenin daha iyi yollarını tasarlar. İlk buluşma: One Day on an Island · Chapter I.",
     "footer.explore": "Keşfet",
@@ -235,7 +233,6 @@ export const copy = {
     "tickets.tag": "The full day included",
     "tickets.intro":
       "A home on Büyükada, creative workshops and a day together from afternoon into the night.",
-    "tickets.cta": "Join",
     "tickets.includes": "Your ticket includes",
     "tickets.i1": "Access to all workshops",
     "tickets.i2": "Food by Bite Foods",
@@ -302,7 +299,6 @@ export const copy = {
     "closing.title": "Meet us on the island.",
     "closing.body":
       "If you have a question about joining or the programme, write to us. A real person will answer.",
-    "closing.cta": "Join",
     "footer.about":
       "Soul Collective designs better ways to spend time together. First gathering: One Day on an Island · Chapter I.",
     "footer.explore": "Explore",

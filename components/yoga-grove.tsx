@@ -156,9 +156,9 @@ function Photo({
     </div>
   );
 }
-function Brand() {
+function Brand({ className }: { className?: string }) {
   return (
-    <a href="#top" className="brand" aria-label="Soul Collective">
+    <a href="#top" className={cn("brand", className)} aria-label="Soul Collective">
       <Image
         src="/assets/brand-mark.png"
         alt=""
@@ -443,7 +443,6 @@ export function YogaGrove({
                   </div>
                 ))}
               </div>
-              <Join>{t("nav.apply")}</Join>
             </Reveal>
           </div>
           <div className="venue-gallery" aria-label={t("gallery.label")}>
@@ -483,39 +482,30 @@ export function YogaGrove({
             ))}
           </div>
         </section>
-        <section id="akis" className="section shell method-grid">
-          <div className="method-intro">
-            <Reveal>
+        <section id="akis" className="section shell">
+          <Reveal className="section-heading split-heading">
+            <div>
               <Label>{t("flow.eyebrow")}</Label>
               <h2>{t("flow.title")}</h2>
               <p>{t("flow.body")}</p>
-              <Join>{t("nav.apply")}</Join>
-            </Reveal>
-          </div>
-          <div className="method-stack">
+            </div>
+          </Reveal>
+          <ol className="flow-steps">
             {flowPhotos.map(([file, trAlt, enAlt], i) => (
-              <motion.article
-                key={file}
-                className="method-card"
-                style={{
-                  top: 115 + i * 18,
-                  rotate: reduced ? 0 : i === 1 ? 2 : -2,
-                }}
-                initial={{ opacity: 0, y: reduced ? 0 : 60 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.15 }}
-                transition={{ duration: 0.7 }}
-              >
-                <Photo file={file} alt={en ? enAlt : trAlt} />
-                <div className="method-shade" />
-                <span className="method-number">0{i + 1}</span>
-                <div className="method-caption">
+              <li key={file}>
+                <Reveal className="flow-step" delay={i * 0.08}>
+                  <div className="flow-photo">
+                    <Photo file={file} alt={en ? enAlt : trAlt} />
+                    <span className="flow-number" aria-hidden="true">
+                      0{i + 1}
+                    </span>
+                  </div>
                   <h3>{t(`flow.s${i + 1}t` as CopyKey)}</h3>
                   <p>{t(`flow.s${i + 1}b` as CopyKey)}</p>
-                </div>
-              </motion.article>
+                </Reveal>
+              </li>
             ))}
-          </div>
+          </ol>
         </section>
         <section id="atolyeler" className="section shell">
           <Reveal className="section-heading split-heading">
@@ -524,7 +514,6 @@ export function YogaGrove({
               <h2>{t("workshops.title")}</h2>
               <p>{t("workshops.body")}</p>
             </div>
-            <Join>{t("nav.apply")}</Join>
           </Reveal>
           <div className="classes-grid">
             {workshops[language].map((w, i) => (
@@ -617,7 +606,6 @@ export function YogaGrove({
               <Label>{t("tickets.tag")}</Label>
               <h3>Island Pass</h3>
               <p>{t("tickets.intro")}</p>
-              <Join light>{t("tickets.cta")}</Join>
             </div>
             <div>
               <h3>{t("tickets.includes")}</h3>
@@ -713,7 +701,6 @@ export function YogaGrove({
             <p className="eyebrow">{t("closing.eyebrow")}</p>
             <h2>{t("closing.title")}</h2>
             <p>{t("closing.body")}</p>
-            <Join light>{t("closing.cta")}</Join>
           </Reveal>
         </section>
       </main>
@@ -728,13 +715,12 @@ export function YogaGrove({
               <h2>{t(footerVariant === "watercolor" ? "footer.postcardTitle" : "footer.collageTitle")}</h2>
               <div className="island-footer-invitation-body">
                 <p>{t("footer.invitation")}</p>
-                <Join>{t("closing.cta")}</Join>
               </div>
             </div>
           )}
           <div className="footer-grid">
             <div className="footer-about">
-              <Brand />
+              <Brand className="footer-brand" />
               <p>{t("footer.about")}</p>
               <a href="https://instagram.com/collectivebysoul">
                 @collectivebysoul
@@ -755,7 +741,6 @@ export function YogaGrove({
                   {t(`nav.${key}`)}
                 </a>
               ))}
-              <a href="#basvuru">{t("nav.apply")}</a>
               <Link href="/misafir">{t("nav.guest")}</Link>
             </div>
             <div>
@@ -764,11 +749,6 @@ export function YogaGrove({
               <a href={`mailto:${email}`}>{email}</a>
             </div>
           </div>
-          {footerVariant === "original" && (
-            <div className="footer-wordmark" aria-hidden="true">
-              soul collective
-            </div>
-          )}
           <div className="footer-bottom">
             <p>© 2026 Soul Collective</p>
             <span>ONE DAY ON AN ISLAND</span>
