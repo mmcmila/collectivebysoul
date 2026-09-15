@@ -17,7 +17,6 @@ async function action(name,args,auth=true){
 try{
  const [admin]=await sql`SELECT id FROM guest_event.admins WHERE active LIMIT 1`;
  await sql`INSERT INTO guest_event.admin_sessions(token_hash,admin_id,expires_at) VALUES(${hash(token)},${admin.id},now()+interval '5 minutes')`;
- // Temporary demo fixture is excluded from real attendee counts and removed in finally.
  const [ticket]=await sql`INSERT INTO guest_event.tickets(name,code_hash,is_demo) VALUES('TEST workshop removal',${hash(randomBytes(32))},true) RETURNING id`;
  ticketId=ticket.id;
  const plan={selected:['sound','scent'],slot:'',note:'Preserve this note',consent:true};

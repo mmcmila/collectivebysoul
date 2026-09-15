@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   const reply = (body: object, status: number) =>
     Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
-  // Browser requests must come from this site. No permissive CORS response.
+  // Same-origin requests only; no CORS.
   const origin = request.headers.get("origin");
   if (origin && origin !== new URL(request.url).origin)
     return reply({ error: "forbidden" }, 403);
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     await submitToGoogle(result.application);
     return reply({ ok: true }, 200);
   } catch {
-    // Never log contact details or automatically retry a potentially accepted submission.
+    // Don't log contact details or retry: Google may have accepted it.
     return reply({ error: "unconfirmed" }, 502);
   }
 }

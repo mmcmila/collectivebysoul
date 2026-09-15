@@ -88,7 +88,7 @@ const flowPhotos = [
     "The house and pool lit up at night",
   ],
 ];
-// Deterministic equaliser bars so server and client render the same markup.
+// Deterministic bars avoid a hydration mismatch.
 const musicBars = Array.from({ length: 26 }, (_, i) => ({
   "--s": 0.33 + ((i * 37) % 59) / 100,
   "--d": `${0.59 + ((i * 23) % 57) / 100}s`,

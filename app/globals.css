@@ -128,7 +128,6 @@
     @apply font-sans;
   }
 }
-/* Yogagrove: warm paper, quiet greens, generous space. */
 :root {
   --background: #fefdfb;
   --foreground: #2a332b;
@@ -1159,7 +1158,6 @@ h4 {
   }
 }
 
-/* Event content in the original 0f02bf1 layout. */
 .nav-controls {
   display: flex;
   align-items: center;

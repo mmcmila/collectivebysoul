@@ -32,7 +32,6 @@ INSERT INTO guest_event.workshops (id) VALUES ('sound'), ('scent'), ('style'),
  ('fortune-21:15'), ('fortune-21:30'), ('fortune-21:45'), ('fortune-22:00')
  ON CONFLICT DO NOTHING;
 
--- Organiser-only spreadsheet-style view; one row per saved guest plan.
 CREATE OR REPLACE VIEW guest_event.katilimci_listesi AS
 SELECT
  t.name AS "Katılımcı",

@@ -17,7 +17,7 @@ test("browser language and explicit preference",()=>{
 test("all server validation messages have English translations",()=>{
  for(const file of ["app/misafir/actions.ts","lib/guest/reservations.ts"]){
   const source=readFileSync(file,"utf8");
-  const errors=[...source.matchAll(/(?:error:\s*|throw new Error\()"([^"]+)"/g)].map(x=>x[1]);
+  const errors=[...source.matchAll(/(?:error:\s*|throw new \w*Error\(\s*)"([^"]+)"/g)].map(x=>x[1]);
   assert.ok(errors.length>0);
   for(const error of errors)assert.ok(english[error],error);
  }

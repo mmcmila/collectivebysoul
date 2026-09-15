@@ -1,5 +1,4 @@
--- Fourteen 15-minute sessions: 3.5 hours of appointments in total.
--- Keep all existing reservations and add new evening windows where space allows.
+-- Fourteen 15-minute sessions (3.5 hours); existing reservations are kept.
 BEGIN;
 SELECT pg_advisory_xact_lock(19092026);
 DO $$

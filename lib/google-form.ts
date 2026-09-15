@@ -1,5 +1,5 @@
 // Public Google Form identifiers, not credentials. Keep these in sync with the form.
-export const GOOGLE_FORM_URL =
+const GOOGLE_FORM_URL =
   "https://docs.google.com/forms/d/e/1FAIpQLScyCp7khmAbbe0Yny74eZ-4rOmCAZQlmIoWJiqh4FqPRx7DCQ/viewform";
 const GOOGLE_FORM_ACTION = GOOGLE_FORM_URL.replace(/viewform$/, "formResponse");
 export const GOOGLE_ENTRIES = {
@@ -27,7 +27,7 @@ export type Application = {
   language: "tr" | "en";
 };
 export type ApplicationField = keyof Application;
-export type ValidationResult =
+type ValidationResult =
   | { valid: true; application: Application }
   | { valid: false; fields: ApplicationField[] };
 
