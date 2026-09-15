@@ -9,3 +9,8 @@ public/*.jpeg
 public/*.png
 public/images/
 public/assets/*.jpg
+.env*.local
+tmp/
+output/
+tests/
+.claude/

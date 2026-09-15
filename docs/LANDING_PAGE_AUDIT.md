@@ -1,3 +1,5 @@
+> Historical reference: this document predates the removal of event transport. The current source of truth is `public/index.html` (Turkish and English). Transport inclusions, departure schedules, related images and the former pass name in this document no longer apply.
+
 # One Day on an Island — landing page audit
 
 Reviewed: 8 September 2026
@@ -97,7 +99,7 @@ The site now offers one ticket only: The Crossing Pass. Keep the price off the l
 
 “Referansın varsa, adını söyle” makes the event sound invitation-only, while the site also allows people without a connection to apply. That ambiguity can feel cliquish. If a reference is genuinely optional, say so directly.
 
-Recommended framing: the application is not a status test; it helps a small team plan a fifty-person house, workshop capacities and who is arriving together. If applications are actually curated, publish the criteria and expected response time. Do not borrow “radical inclusion” language unless the process reflects it.
+Recommended framing: the application is not a status test; it helps a small team plan a thirty-person house, workshop capacities and who is arriving together. If applications are actually curated, publish the criteria and expected response time. Do not borrow “radical inclusion” language unless the process reflects it.
 
 ### 11. Reduce image weight and layout shift
 
@@ -121,7 +123,7 @@ The current copy feels generated because it frequently uses the same sentence ar
 
 The rewrite should follow four rules:
 
-- Prefer evidence over adjectives: boat times, fifty seats, a private pier, one quiet hour, a perfume guests take home.
+- Prefer evidence over adjectives: boat times, thirty seats, a private pier, one quiet hour, a perfume guests take home.
 - Let sentences vary. Some can be blunt, some sensory, some practical.
 - Speak as hosts (“gidiyoruz,” “masayı kuruyoruz”) rather than as a lifestyle brand describing an audience.
 - Reserve mystery for the Fortune Dome. Be precise everywhere else.

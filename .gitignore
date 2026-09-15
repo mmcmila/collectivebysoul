@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+.env*.local
+
+/tmp/yonetim-giris.txt
+
+# local working material (not part of the site)
+/output/
+/tmp/
+/public/*.jpg
+/public/*.jpeg
+/public/*.png

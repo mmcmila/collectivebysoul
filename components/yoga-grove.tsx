@@ -787,7 +787,7 @@ export function YogaGrove() {
             <p>
               Everything you might want to know before your first class. Still
               curious?{" "}
-              <a href="mailto:hello@yogagrove.studio" className="inline-link">
+              <a href="mailto:collectivebysoul@gmail.com" className="inline-link">
                 Just reach out.
               </a>
             </p>
@@ -903,7 +903,7 @@ export function YogaGrove() {
                 Fitzroy VIC 3065
               </a>
               <a href="tel:+61394170432">(03) 9417 0432</a>
-              <a href="mailto:hello@yogagrove.studio">hello@yogagrove.studio</a>
+              <a href="mailto:collectivebysoul@gmail.com">collectivebysoul@gmail.com</a>
               <p>
                 Mon–Fri 6am–9pm
                 <br />
@@ -947,7 +947,7 @@ export function YogaGrove() {
           </p>
           <a
             className={buttonVariants({ size: "lg" })}
-            href={`mailto:hello@yogagrove.studio?subject=${encodeURIComponent(`Class enquiry: ${booking ?? "Yoga"}`)}`}
+            href={`mailto:collectivebysoul@gmail.com?subject=${encodeURIComponent(`Class enquiry: ${booking ?? "Yoga"}`)}`}
           >
             Email the studio
             <ArrowUpRight data-icon="inline-end" />
