@@ -1,3 +1,5 @@
+> Historical reference: this document predates the removal of event transport. The current source of truth is `components/event-content.ts` (Turkish and English). Transport inclusions, departure schedules, related images and the former pass name in this document no longer apply.
+
 # One Day on an Island — website copy
 
 Status: first complete draft
@@ -7,7 +9,7 @@ Voice: direct, warm, specific; less “wellness brand,” more like a host telli
 
 ## Editorial direction
 
-The recommended hero line is **“Şehirden bir tekne uzağa.”** It belongs to this event because the crossing is not a logistical footnote; it is how the day begins. The copy below assumes that a reference is optional and that the application exists to manage a fifty-person format, not to judge whether somebody is “the right kind of person.” Confirm that assumption before publishing.
+The recommended hero line is **“Şehirden bir tekne uzağa.”** It belongs to this event because the crossing is not a logistical footnote; it is how the day begins. The copy below assumes that a reference is optional and that the application exists to manage a thirty-person format, not to judge whether somebody is “the right kind of person.” Confirm that assumption before publishing.
 
 Avoid these words unless they describe something provable: *eşsiz, unutulmaz, büyülü, dönüştürücü, ilham verici, ruhunu besleyen, benzer düşünen insanlar*. The images already provide atmosphere. The words should provide character and clarity.
 
@@ -19,7 +21,7 @@ Avoid these words unless they describe something provable: *eşsiz, unutulmaz, b
 One Day on an Island — 19 Eylül 2026, Büyükada
 
 **Meta description**
-Elli kişi, Büyükada’da denize açılan bir ev ve öğleden gece yarısına uzanan bir gün: atölyeler, havuz, müzik, yemek ve özel tekne yolculuğu.
+Otuz kişi, Büyükada’da denize açılan bir ev ve öğleden gece yarısına uzanan bir gün: atölyeler, havuz, müzik, yemek ve özel tekne yolculuğu.
 
 **Social title**
 Şehirden bir tekne uzağa.
@@ -46,7 +48,7 @@ Chapter I · The Crossing · 19 Eylül 2026
 Şehirden bir tekne uzağa.
 
 **Body**
-Elli kişiyle Büyükada’daki denize açılan bir eve gidiyoruz. Öğleden gece yarısına kadar atölyeler, havuz, müzik ve aynı masada yemek var.
+Otuz kişiyle Büyükada’daki denize açılan bir eve gidiyoruz. Öğleden gece yarısına kadar atölyeler, havuz, müzik ve aynı masada yemek var.
 
 **Primary CTA**
 Başvurunu gönder
@@ -58,7 +60,7 @@ Günün akışına bak
 
 - 19 Eylül, Cumartesi
 - 12:30 Karaköy · 13:00 Kadıköy
-- 50 kişi
+- 30 kişi
 - Dönüş 00:30
 
 ### What this day is
@@ -97,7 +99,7 @@ Evi ve tekneyi gör
 
 **Stats**
 
-- 50 misafir
+- 30 misafir
 - 6 atölye ve açık alan
 - Tekneden tekneye 12 saat
 
@@ -215,21 +217,16 @@ Kalabalık bir sahne yerine küçük gruplar ve doğrudan temas istedik. Atölye
 
 ### Music
 
-**Eyebrow / display title**
-16:30–00:00
+Atölyeler bölümünün içinde, atölye kartlarının altında yer alır (`#muzik`).
 
-**Headline**
-Müzik
+**Eyebrow**
+Günün müziği
 
-**Status**
-Line-up TBA
+**Artist**
+TUGEN
 
-**DJ'ler · A–Z**
-
-- Emre Arısev
-- Manthem
-- Özlem Atalay
-- Tugen
+**Body**
+**Müzik Tugen'den.** Bahçede, havuz kenarında ve atölyelerin arasında gün boyu sana eşlik edecek bir seçki. Öğleden sonra sakin başlayan akış, güneş batarken geceye doğru yükseliyor.
 
 ### Tickets
 
@@ -270,7 +267,7 @@ Bar menüsündeki kokteyller bilete dahil değildir.
 Başvuru
 
 **Headline**
-Elli kişilik sofrada sana da yer açalım.
+Otuz kişilik sofrada sana da yer açalım.
 
 **Body**
 Referansın olması gerekmiyor. Bu kısa form bir eleme testi değil; evin kapasitesini, atölye gruplarını ve birlikte gelenleri planlamamıza yardımcı oluyor. Başvuruna en geç 72 saat içinde ödeme bağlantısı ve sonraki adımlarla döneceğiz.
@@ -293,10 +290,10 @@ Mekân kurallarını ve iptal koşullarını okudum, kabul ediyorum.
 Başvuruyu tamamla
 
 **Success message**
-Başvurun geldi. En geç 72 saat içinde e-postayla haber vereceğiz. Bu sırada aklına bir şey takılırsa hello@soulcollective.co adresine yazabilirsin.
+Başvurun geldi. En geç 72 saat içinde e-postayla haber vereceğiz. Bu sırada aklına bir şey takılırsa collectivebysoul@gmail.com adresine yazabilirsin.
 
 **Error message**
-Form şu anda gönderilemedi. Bir kez daha deneyebilir ya da bilgilerini hello@soulcollective.co adresine iletebilirsin.
+Form şu anda gönderilemedi. Bir kez daha deneyebilir ya da bilgilerini collectivebysoul@gmail.com adresine iletebilirsin.
 
 ### FAQ
 
@@ -328,7 +325,7 @@ Evet. Gün aynı tekneyle başlayıp aynı masada devam ettiği için tek gelenl
 Evet. Her misafir ayrı bir başvuru doldurmalı; birlikte geldiğiniz kişinin adını formda belirtmeniz yeterli.
 
 **Neden başvuru alıyorsunuz?**
-Çünkü burası büyük bir festival alanı değil, elli kişilik özel bir ev. Başvuru; evin kapasitesini, küçük atölye gruplarını ve ulaşımı doğru planlamamızı sağlıyor. Referans zorunlu değil.
+Çünkü burası büyük bir festival alanı değil, otuz kişilik özel bir ev. Başvuru; evin kapasitesini, küçük atölye gruplarını ve ulaşımı doğru planlamamızı sağlıyor. Referans zorunlu değil.
 
 **İptal koşulları nedir?**
 8 Eylül 2026’ya kadar yapılan iptallerde ücretin tamamını iade ediyoruz. Bu tarihten sonra biletini, bize önceden haber vererek başka birine devredebilirsin. [State refund timing and any non-refundable fees.]
@@ -364,7 +361,7 @@ Soul Collective, birlikte vakit geçirmenin daha iyi yollarını tasarlar. İlk 
 - Villa Büyükada, İstanbul
 - Karaköy 12:30 · Kadıköy 13:00
 - Dönüş 00:30
-- hello@soulcollective.co
+- collectivebysoul@gmail.com
 - @collectivebysoul
 
 Remove “Chapter II” until it leads to a real announcement or waitlist.
@@ -377,7 +374,7 @@ Remove “Chapter II” until it leads to a real announcement or waitlist.
 One Day on an Island — 19 September 2026, Büyükada
 
 **Meta description**
-Fifty people, a waterfront home on Büyükada and an afternoon that runs past midnight: workshops, swimming, music, food and a private boat crossing.
+Thirty people, a waterfront home on Büyükada and an afternoon that runs past midnight: workshops, swimming, music, food and a private boat crossing.
 
 **Social title**
 One boat away from the city.
@@ -404,7 +401,7 @@ Chapter I · The Crossing · 19 September 2026
 One boat away from the city.
 
 **Body**
-Fifty of us are heading to a waterfront home on Büyükada. From early afternoon until after midnight: workshops, swimming, music and dinner around one table.
+Thirty of us are heading to a waterfront home on Büyükada. From early afternoon until after midnight: workshops, swimming, music and dinner around one table.
 
 **Primary CTA**
 Send your application
@@ -416,7 +413,7 @@ See how the day unfolds
 
 - Saturday, 19 September
 - 12:30 Karaköy · 13:00 Kadıköy
-- 50 people
+- 30 people
 - Return at 00:30
 
 ### What this day is
@@ -455,7 +452,7 @@ See the house and boat
 
 **Stats**
 
-- 50 guests
+- 30 guests
 - 6 workshops and open spaces
 - 12 hours, boat to boat
 
@@ -573,21 +570,16 @@ We chose small groups and direct exchange over a crowded stage. The people who s
 
 ### Music
 
-**Eyebrow / display title**
-16:30–00:00
+Sits inside the workshops section, below the workshop cards (`#muzik`).
 
-**Headline**
-Music
+**Eyebrow**
+Music for the day
 
-**Status**
-Line-up TBA
+**Artist**
+TUGEN
 
-**DJs · A–Z**
-
-- Emre Arısev
-- Manthem
-- Özlem Atalay
-- Tugen
+**Body**
+**Music by Tugen.** A selection that stays with you all day, across the garden, by the pool and between workshops. It begins gently in the afternoon and builds towards the night as the sun goes down.
 
 ### Tickets
 
@@ -631,7 +623,7 @@ Application
 Let us make room for you at the table.
 
 **Body**
-You do not need a reference. This short form is not an audition; it helps us plan a fifty-person house, small workshop groups and guests arriving together. We will reply within 72 hours with a payment link and the next steps.
+You do not need a reference. This short form is not an audition; it helps us plan a thirty-person house, small workshop groups and guests arriving together. We will reply within 72 hours with a payment link and the next steps.
 
 **Fields**
 
@@ -651,10 +643,10 @@ I have read and accept the house rules and cancellation terms.
 Complete application
 
 **Success message**
-We have your application. You will hear from us by email within 72 hours. In the meantime, write to hello@soulcollective.co if anything comes to mind.
+We have your application. You will hear from us by email within 72 hours. In the meantime, write to collectivebysoul@gmail.com if anything comes to mind.
 
 **Error message**
-The form could not be sent. Please try again, or email your details to hello@soulcollective.co.
+The form could not be sent. Please try again, or email your details to collectivebysoul@gmail.com.
 
 ### FAQ
 
@@ -686,7 +678,7 @@ Yes. The day begins on one boat and continues around one table, so there are man
 Yes. Every guest needs to submit a separate application; just name the person you are coming with on the form.
 
 **Why is there an application?**
-Because this is a fifty-person private home, not a large festival ground. The application helps us plan the house, small workshop groups and transport properly. A reference is not required.
+Because this is a thirty-person private home, not a large festival ground. The application helps us plan the house, small workshop groups and transport properly. A reference is not required.
 
 **What is the cancellation policy?**
 Cancellations made by 8 September 2026 receive a full refund. After that, you may transfer your ticket to someone else with advance notice. [Add refund timing and any non-refundable fees.]
@@ -722,7 +714,7 @@ Soul Collective designs better ways to spend time together. First gathering: One
 - Villa Büyükada, Istanbul
 - Karaköy 12:30 · Kadıköy 13:00
 - Return at 00:30
-- hello@soulcollective.co
+- collectivebysoul@gmail.com
 - @collectivebysoul
 
 Remove “Chapter II” until it leads to a real announcement or waitlist.

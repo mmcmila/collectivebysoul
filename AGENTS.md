@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Project overview
 
-This repository is a Next.js App Router frontend for Collective by Soul, currently recreating the Yogagrove reference. Keep the implementation simple: reusable components, content arrays, and focused CSS. There is no database, authentication, checkout, or booking backend.
+This repository is a Next.js App Router frontend for Collective by Soul, presenting One Day on an Island in the original Yogagrove-inspired layout. Keep the implementation simple: reusable components, content arrays, and focused CSS. Applications are submitted through a server route to Google Forms. The `/misafir` guest portal and `/yonetim` management console use server-side PostgreSQL access; there is no checkout or payment integration. The static `public/index.html` homepage was removed; do not reintroduce static HTML pages or rewrites.
 
 ## Package manager
 
@@ -24,20 +24,20 @@ This repository is a Next.js App Router frontend for Collective by Soul, current
 
 - Read the relevant bundled Next.js documentation before changing framework code, as required above.
 - Keep `app/page.tsx` and `app/layout.tsx` as Server Components. Interactive state and Motion belong in client components.
-- Page content and interactions currently live in `components/yoga-grove.tsx`; styling lives in `app/globals.css`.
+- Page sections and interactions live in `components/yoga-grove.tsx`; bilingual copy and workshop data live in `components/event-content.ts`; styling lives in `app/globals.css`.
 - Reuse the existing shadcn components in `components/ui/`. This project uses Base UI, so check its APIs instead of assuming Radix `asChild` patterns.
 - Use `next/image` with descriptive alt text and responsive sizes. Keep Poppins self-hosted through `next/font/local`.
 - Preserve the warm cream and forest-green palette, readable contrast, responsive layout, and reduced-motion behavior.
 - Review adjacent section padding together to avoid doubled whitespace. Keep deliberate breathing room around the closing banner.
 - Keep navigation, keyboard focus, dialog titles, and FAQ interactions accessible.
-- Keep demo limitations explicit. Do not imply a booking is confirmed when only an email enquiry is available.
+- Keep application limitations explicit. Google Forms receipt does not confirm a booking. Keep field mappings and confirmation text in `lib/google-form.ts` synchronized with the published form.
 
 ## Validation
 
 - Run `pnpm lint` and `pnpm build` for code or dependency changes.
 - For visual changes, inspect affected sections on desktop (around 1252px wide) and mobile (around 390px wide). Check overflow, spacing, image loading, and text wrapping.
 - For interaction changes, verify the affected menu, dialog, FAQ, or link in the browser and check keyboard operation.
-- There is no test runner configured. Do not claim automated tests passed; report the checks actually performed. Add tests when meaningful behavior warrants them.
+- Run the focused Node tests with `node --experimental-strip-types --test tests/google-form.test.mjs` (Node.js 22.6+). Report the checks actually performed; use clearly labeled synthetic data for live submission checks.
 - Keep documentation aligned with actual scripts, features, and limitations.
 
 ## Working in this repository

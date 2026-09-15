@@ -13,9 +13,19 @@ const poppins = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Yogagrove — Yoga & Wellness Studio",
+  metadataBase: new URL(
+    process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : "http://localhost:3000",
+  ),
+  openGraph: {
+    title: "Leave the city behind.",
+    description: "One Day on an Island · Chapter I · 19 Eylül 2026 · Büyükada",
+    images: ["/assets/web/hero.webp"],
+  },
+  title: "One Day on an Island — 19 Eylül 2026, Büyükada",
   description:
-    "Find ease in every breath. Small-group yoga, breathwork and mindful movement for every body, in-studio or at home.",
+    "Otuz kişi, Büyükada’da denize açılan bir ev ve öğleden gece yarısına uzanan bir gün: atölyeler, havuz ve yemek.",
 };
 
 export default function RootLayout({
@@ -24,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={poppins.variable}>
+    <html lang="tr" className={poppins.variable}>
       <body>{children}</body>
     </html>
   );

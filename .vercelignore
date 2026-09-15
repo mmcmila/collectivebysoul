@@ -7,5 +7,8 @@ public/.DS_Store
 public/*.jpg
 public/*.jpeg
 public/*.png
-public/images/
-public/assets/*.jpg
+.env*.local
+tmp/
+output/
+tests/
+.claude/
