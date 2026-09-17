@@ -89,7 +89,12 @@ export async function saveGuestPlan(input: GuestPlan) {
     !Array.isArray(input.selected) ||
     input.selected.length > 3 ||
     !input.selected.every(isWorkshopId) ||
-    new Set(input.selected).size !== input.selected.length
+    new Set(input.selected).size !== input.selected.length ||
+    !Array.isArray(input.waitlist) ||
+    input.waitlist.length > 3 ||
+    !input.waitlist.every(isWorkshopId) ||
+    new Set(input.waitlist).size !== input.waitlist.length ||
+    typeof input.fortuneWaitlist !== "boolean"
   )
     return { error: "Bilgilerini kontrol et." };
   if (
@@ -104,7 +109,11 @@ export async function saveGuestPlan(input: GuestPlan) {
     return { error: "Lütfen gerekli bilgileri ve paylaşım onayını tamamla." };
   if (input.slot && !validFortuneTime(input.slot))
     return { error: "Geçerli bir Fortune Dome saati seç." };
-  if (input.slot && conflictingWorkshop(input.selected, input.slot))
+  const waitlist = input.waitlist.filter((id) => !input.selected.includes(id));
+  if (
+    input.slot &&
+    conflictingWorkshop([...input.selected, ...waitlist], input.slot)
+  )
     return { error: "Seçtiğin atölye ve Fortune Dome saatlerin çakışıyor." };
   const data: GuestPlan = {
     transport: input.transport,
@@ -113,6 +122,8 @@ export async function saveGuestPlan(input: GuestPlan) {
     party: input.party,
     selected: input.selected,
     slot: input.slot,
+    waitlist,
+    fortuneWaitlist: input.fortuneWaitlist && !input.slot,
     allergy: input.allergy,
     allergyNote: input.allergy === "Var" ? input.allergyNote.trim() : "",
     diet: input.diet,

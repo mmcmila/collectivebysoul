@@ -114,6 +114,8 @@ export async function getAdminData(): Promise<AdminData> {
     sql`SELECT t.id,t.name,t.active,t.is_demo,t.category,p.updated_at,p.data FROM guest_event.tickets t LEFT JOIN guest_event.plans p ON p.ticket_id=t.id ORDER BY p.updated_at DESC NULLS LAST,t.created_at DESC`,
     sql`SELECT w.id,w.capacity,w.enabled,count(t.id)::int AS booked,COALESCE(jsonb_agg(jsonb_build_object('id',t.id,'name',t.name)) FILTER(WHERE t.id IS NOT NULL),'[]'::jsonb) AS guests FROM guest_event.workshops w LEFT JOIN guest_event.reservations r ON r.workshop_id=w.id LEFT JOIN guest_event.tickets t ON t.id=r.ticket_id AND t.active AND NOT t.is_demo GROUP BY w.id ORDER BY w.id`,
   ]);
+  const waitlist =
+    await sql`SELECT wl.target,t.id,t.name,wl.created_at FROM guest_event.waitlist wl JOIN guest_event.tickets t ON t.id=wl.ticket_id AND t.active AND NOT t.is_demo ORDER BY wl.created_at`;
   return {
     guests: guests.map((g) => ({
       id: g.id,
@@ -130,6 +132,12 @@ export async function getAdminData(): Promise<AdminData> {
       booked: w.booked,
       enabled: w.enabled,
       guests: w.guests,
+    })),
+    waitlist: waitlist.map((w) => ({
+      target: w.target,
+      id: w.id,
+      name: w.name,
+      createdAt: w.created_at.toISOString(),
     })),
     fetchedAt: new Date().toISOString(),
   };
@@ -245,6 +253,7 @@ export async function updateParticipant(
       if (!active) {
         await sql`DELETE FROM guest_event.sessions WHERE ticket_id=${id}`;
         await sql`DELETE FROM guest_event.reservations WHERE ticket_id=${id}`;
+        await sql`DELETE FROM guest_event.waitlist WHERE ticket_id=${id}`;
         await sql`UPDATE guest_event.plans SET data=jsonb_set(jsonb_set(data,'{slot}','""'::jsonb),'{selected}','[]'::jsonb),updated_at=now() WHERE ticket_id=${id}`;
       }
     });
@@ -299,7 +308,8 @@ export async function manageFortune(
       await sql`DELETE FROM guest_event.reservations WHERE workshop_id=${id}`;
       if (ticketId) {
         await sql`INSERT INTO guest_event.reservations(ticket_id,workshop_id) VALUES(${ticketId},${id})`;
-        await sql`UPDATE guest_event.plans SET data=jsonb_set(data,'{slot}',${sql.json(slot)}),updated_at=now() WHERE ticket_id=${ticketId}`;
+        await sql`UPDATE guest_event.plans SET data=jsonb_set(jsonb_set(data,'{slot}',${sql.json(slot)}),'{fortuneWaitlist}','false'::jsonb),updated_at=now() WHERE ticket_id=${ticketId}`;
+        await sql`DELETE FROM guest_event.waitlist WHERE ticket_id=${ticketId} AND target='fortune'`;
       }
       await sql`UPDATE guest_event.workshops SET enabled=${enabled} WHERE id=${id}`;
     });

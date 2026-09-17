@@ -54,6 +54,13 @@ function Answers({ guest: g }: { guest: AdminGuest }) {
     ["Birlikte gelen kişi sayısı", p.party],
     ["Atölyeler", p.selected.map((id) => workshopNames[id] || id).join(", ")],
     ["Fortune Dome", p.slot],
+    [
+      "Bekleme listesi",
+      [
+        ...(p.waitlist ?? []).map((id) => workshopNames[id] || id),
+        ...(p.fortuneWaitlist ? ["Fortune Dome"] : []),
+      ].join(", "),
+    ],
     ["Alerji / intolerans", p.allergy],
     ["Alerji açıklaması", p.allergyNote],
     ["Beslenme tercihi", p.diet],
@@ -333,6 +340,7 @@ export function AdminPanel({ initial }: { initial: AdminData }) {
           <AdminWorkshops
             workshops={data.workshops}
             names={workshopNames}
+            waitlist={data.waitlist}
             refresh={refresh}
           />
           <details className="ad-fortune">
@@ -342,6 +350,20 @@ export function AdminPanel({ initial }: { initial: AdminData }) {
               rezervasyonları kaldırabilir veya saati kapatabilirsin. Yeni saat
               atamak kişinin önceki çadır saatini serbest bırakır.
             </p>
+            {data.waitlist.some((w) => w.target === "fortune") && (
+              <p className="ad-waitlist">
+                <strong>Fortune Dome bekleme listesi:</strong>{" "}
+                {data.waitlist
+                  .filter((w) => w.target === "fortune")
+                  .map((w, i) => `${i + 1}. ${w.name}`)
+                  .join(" · ")}
+                <br />
+                <small>
+                  Sırayla boş bir saate atayınca kişi listeden çıkar; saati
+                  kendisine bildirmeyi unutma.
+                </small>
+              </p>
+            )}
             <FortuneScheduleControls
               count={fortuneSlots.length}
               refresh={refresh}

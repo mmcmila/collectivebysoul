@@ -5,6 +5,10 @@ export type GuestPlan = {
   party: string;
   selected: string[];
   slot: string;
+  /** Full workshops the guest wants a place in if one opens up. */
+  waitlist: string[];
+  /** Wants a Fortune Dome slot but none was free; the team assigns one. */
+  fortuneWaitlist: boolean;
   allergy: string;
   allergyNote: string;
   diet: string;
@@ -43,3 +47,13 @@ export const arrivals = [
 ];
 
 export const diets = ["Özel bir tercihim yok", "Vejetaryen", "Vegan", "Diğer"];
+
+/** Older saved plans predate the waitlist fields. */
+export const normalizeGuestPlan = (
+  plan: Partial<GuestPlan> & Record<string, unknown>,
+): GuestPlan =>
+  ({
+    ...plan,
+    waitlist: Array.isArray(plan.waitlist) ? plan.waitlist : [],
+    fortuneWaitlist: plan.fortuneWaitlist === true,
+  }) as GuestPlan;

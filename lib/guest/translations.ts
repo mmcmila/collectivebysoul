@@ -77,6 +77,22 @@ export const english: Record<string, string> = {
     "15 minutes just for you, in the garden.",
   Kapalı: "Closed",
   Dolu: "Full",
+  "Dolu · bekleme listesine katıl": "Full · join the waitlist",
+  "Bekleme listesindesin": "You’re on the waitlist",
+  "Bekleme listesine eklendin. Yer açılırsa sana haber verip yerini ayarlayacağız.":
+    "You’re on the waitlist. If a place opens up, we’ll let you know and arrange it for you.",
+  "Fortune Dome bekleme listesindesin": "You’re on the Fortune Dome waitlist",
+  "Boş saat kalmadı · bekleme listesine katıl":
+    "No slots left · join the waitlist",
+  "Bir saat açılırsa sana haber verir, saatini biz ayarlarız.":
+    "If a slot opens up we’ll let you know and arrange your time.",
+  "Bekleme listesi": "Waitlist",
+  "Seçimlerini kaydettik. Kişisel kodunla yeniden giriş yapıp planını değiştirebilirsin.":
+    "Your choices are saved. You can sign in again with your code and change your plan.",
+  "Bekleme listesi · saati biz ayarlayacağız":
+    "Waitlist · we’ll arrange your time",
+  "Bekleme listesine yazıldığın atölyenin rezervasyonları henüz açılmadı.":
+    "Bookings for the workshop you joined the waitlist for haven’t opened yet.",
   "Saat çakışıyor": "Time conflict",
   "Senin yerin": "Your place",
   Müsait: "Available",

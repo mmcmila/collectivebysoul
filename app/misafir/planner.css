@@ -1678,3 +1678,55 @@
     padding: 7px 9px;
   }
 }
+
+.gp-workshop.waitlisted {
+  border-color: #c9a86a;
+  background: #fbf6ea;
+}
+.gp-workshop.waitlisted .gp-radio {
+  border-color: #a77938;
+  background: #a77938;
+  color: #fff9e9;
+}
+.gp-waitlist-note {
+  margin: 4px 0 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #fbf6ea;
+  color: #6b5330;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.gp-waitlist-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border: 1px solid #dce1d2;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.gp-waitlist-toggle strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+}
+.gp-waitlist-toggle small {
+  display: block;
+  font-size: 10px;
+  color: #7c8470;
+}
+.gp-waitlist-toggle.chosen {
+  border-color: #c9a86a;
+  background: #fbf6ea;
+}
+.gp-waitlist-toggle.chosen .gp-radio {
+  border-color: #a77938;
+  background: #a77938;
+  color: #fff9e9;
+}

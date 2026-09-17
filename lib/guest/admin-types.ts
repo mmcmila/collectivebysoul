@@ -29,8 +29,18 @@ export type AdminWorkshop = {
   guests: { id: string; name: string }[];
 };
 
+export type WaitlistEntry = {
+  /** Workshop id or "fortune". */
+  target: string;
+  id: string;
+  name: string;
+  createdAt: string;
+};
+
 export type AdminData = {
   guests: AdminGuest[];
   workshops: AdminWorkshop[];
+  /** In joining order. */
+  waitlist: WaitlistEntry[];
   fetchedAt: string;
 };

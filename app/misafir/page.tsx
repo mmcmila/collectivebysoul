@@ -9,6 +9,7 @@ import { GuestPlanner } from "@/components/guest-planner";
 import { GuestLogin } from "@/components/guest-login";
 import { currentGuest } from "@/lib/guest/session";
 import { guestDb } from "@/lib/guest/db";
+import { normalizeGuestPlan } from "@/lib/guest/types";
 import { getAvailability } from "./actions";
 import "./planner.css";
 export const metadata: Metadata = {
@@ -36,7 +37,7 @@ export default async function GuestPage() {
       <GuestPlanner
         initial={{
           isDemo: guest.is_demo,
-          plan: plans[0]?.data ?? null,
+          plan: plans[0]?.data ? normalizeGuestPlan(plans[0].data) : null,
           availability,
         }}
       />
