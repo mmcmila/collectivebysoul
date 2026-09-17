@@ -104,21 +104,22 @@ export function GuestPlanner({ initial }: { initial: GuestData }) {
     };
   }, []);
   const [step, setStep] = useState(0);
-  const [plan, setPlan] = useState<GuestPlan>(
-    saved ?? {
-      transport: "",
-      origin: "",
-      arrival: "",
-      party: "1",
-      selected: [],
-      slot: "",
-      allergy: "",
-      allergyNote: "",
-      diet: diets[0],
-      note: "",
-      consent: false,
-    },
-  );
+  const [plan, setPlan] = useState<GuestPlan>(() => ({
+    transport: "",
+    origin: "",
+    arrival: "",
+    party: "1",
+    selected: [],
+    slot: "",
+    waitlist: [],
+    fortuneWaitlist: false,
+    allergy: "",
+    allergyNote: "",
+    diet: diets[0],
+    note: "",
+    consent: false,
+    ...saved,
+  }));
   const {
     transport,
     origin,
@@ -126,6 +127,8 @@ export function GuestPlanner({ initial }: { initial: GuestData }) {
     party,
     selected,
     slot,
+    waitlist,
+    fortuneWaitlist,
     allergy,
     allergyNote,
     diet,
@@ -184,9 +187,28 @@ export function GuestPlanner({ initial }: { initial: GuestData }) {
       selected: selected.includes(id)
         ? selected.filter((x) => x !== id)
         : [...selected, id],
+      // A reserved place replaces the waitlist entry for the same workshop.
+      waitlist: waitlist.filter((x) => x !== id),
+    });
+  }
+  function toggleWaitlist(id: string) {
+    setError("");
+    if (slot && conflictingWorkshop([id], slot) && !waitlist.includes(id))
+      return setError(
+        "Bu atölye Fortune Dome saatinle çakışıyor. Önce başka bir saat seçebilirsin.",
+      );
+    update({
+      waitlist: waitlist.includes(id)
+        ? waitlist.filter((x) => x !== id)
+        : [...waitlist, id],
     });
   }
   const active = workshops.filter((w) => selected.includes(w.id));
+  const waitingFor = workshops.filter((w) => waitlist.includes(w.id));
+  const fortuneFree = slots.some((time) => {
+    const a = availability.find((a) => a.id === `fortune-${time}`);
+    return a?.enabled && !(a.remaining === 0 && !a.owned);
+  });
   return (
     <div className="gp" lang={language} data-step={step}>
       <header className="gp-header">
@@ -421,16 +443,17 @@ export function GuestPlanner({ initial }: { initial: GuestData }) {
                         a?.remaining === null
                           ? null
                           : (a?.remaining ?? 0) + (a?.owned ? 1 : 0);
+                      const full = available === 0 && !selected.includes(w.id);
+                      const waiting = waitlist.includes(w.id);
                       return (
                         <button
                           key={w.id}
-                          disabled={
-                            !a?.enabled ||
-                            (available === 0 && !selected.includes(w.id))
+                          disabled={!a?.enabled}
+                          className={`gp-workshop ${selected.includes(w.id) ? "chosen" : ""} ${full && waiting ? "waitlisted" : ""}`}
+                          aria-pressed={selected.includes(w.id) || (full && waiting)}
+                          onClick={() =>
+                            full ? toggleWaitlist(w.id) : toggle(w.id)
                           }
-                          className={`gp-workshop ${selected.includes(w.id) ? "chosen" : ""}`}
-                          aria-pressed={selected.includes(w.id)}
-                          onClick={() => toggle(w.id)}
                         >
                           <Image
                             src={`/assets/web/${w.image}.webp`}
@@ -453,9 +476,13 @@ export function GuestPlanner({ initial }: { initial: GuestData }) {
                                   ? t("Yakında açılacak")
                                   : available === null
                                     ? t("Açık katılım")
-                                    : language === "en"
-                                      ? `${available} places available · ${a?.capacity} total`
-                                      : `${available} yer müsait · ${a?.capacity} kişilik`}
+                                    : full
+                                      ? waiting
+                                        ? t("Bekleme listesindesin")
+                                        : t("Dolu · bekleme listesine katıl")
+                                      : language === "en"
+                                        ? `${available} places available · ${a?.capacity} total`
+                                        : `${available} yer müsait · ${a?.capacity} kişilik`}
                               </span>
                             </span>
                             <h2>{t(w.title)}</h2>
@@ -463,11 +490,20 @@ export function GuestPlanner({ initial }: { initial: GuestData }) {
                             <small>{t(w.desc)}</small>
                           </div>
                           <span className="gp-radio">
-                            {selected.includes(w.id) && <Check size={12} />}
+                            {(selected.includes(w.id) || (full && waiting)) && (
+                              <Check size={12} />
+                            )}
                           </span>
                         </button>
                       );
                     })}
+                    {waitingFor.length > 0 && (
+                      <p className="gp-waitlist-note" role="status">
+                        {t(
+                          "Bekleme listesine eklendin. Yer açılırsa sana haber verip yerini ayarlayacağız.",
+                        )}
+                      </p>
+                    )}
                     <div className="gp-fortune">
                       <div>
                         <Sparkles size={20} />
@@ -492,7 +528,10 @@ export function GuestPlanner({ initial }: { initial: GuestData }) {
                               }
                               aria-pressed={slot === time}
                               onClick={() =>
-                                update({ slot: slot === time ? "" : time })
+                                update({
+                                  slot: slot === time ? "" : time,
+                                  fortuneWaitlist: false,
+                                })
                               }
                               className={slot === time ? "chosen" : ""}
                             >
@@ -514,6 +553,32 @@ export function GuestPlanner({ initial }: { initial: GuestData }) {
                           );
                         })}
                       </div>
+                      {!slot && (!fortuneFree || fortuneWaitlist) && (
+                        <button
+                          type="button"
+                          className={`gp-waitlist-toggle ${fortuneWaitlist ? "chosen" : ""}`}
+                          aria-pressed={fortuneWaitlist}
+                          onClick={() =>
+                            update({ fortuneWaitlist: !fortuneWaitlist })
+                          }
+                        >
+                          <span className="gp-radio">
+                            {fortuneWaitlist && <Check size={12} />}
+                          </span>
+                          <span>
+                            <strong>
+                              {fortuneWaitlist
+                                ? t("Fortune Dome bekleme listesindesin")
+                                : t("Boş saat kalmadı · bekleme listesine katıl")}
+                            </strong>
+                            <small>
+                              {t(
+                                "Bir saat açılırsa sana haber verir, saatini biz ayarlarız.",
+                              )}
+                            </small>
+                          </span>
+                        </button>
+                      )}
                       <small>
                         {t(
                           "Her saat 1 kişilik. Yerler planını kaydettiğinde ayrılır.",
@@ -652,9 +717,26 @@ export function GuestPlanner({ initial }: { initial: GuestData }) {
                                 {slot} {t("· 15 dakika")}
                               </p>
                             )}
-                            {!active.length && !slot && (
-                              <p>{t("Henüz saatli bir atölye seçmedin.")}</p>
+                            {waitingFor.map((w) => (
+                              <p key={"wait-" + w.id}>
+                                <strong>{t(w.title)}</strong>
+                                <br />
+                                {t("Bekleme listesi")} · {w.time}
+                              </p>
+                            ))}
+                            {fortuneWaitlist && !slot && (
+                              <p>
+                                <strong>Fortune Dome</strong>
+                                <br />
+                                {t("Bekleme listesi · saati biz ayarlayacağız")}
+                              </p>
                             )}
+                            {!active.length &&
+                              !slot &&
+                              !waitingFor.length &&
+                              !fortuneWaitlist && (
+                                <p>{t("Henüz saatli bir atölye seçmedin.")}</p>
+                              )}
                             <small>
                               {t("Açık stüdyolara gün boyunca uğrayabilirsin.")}
                             </small>
@@ -751,10 +833,21 @@ export function GuestPlanner({ initial }: { initial: GuestData }) {
                   ? t(
                       "Deneme planın kaydedildi. Bu hesap gerçek atölye kontenjanı kullanmaz.",
                     )
-                  : t(
-                      "Seçimlerini kaydettik. Atölye yerlerin ayrıldı; kişisel kodunla yeniden giriş yapıp planını değiştirebilirsin.",
-                    )}
+                  : active.length || slot
+                    ? t(
+                        "Seçimlerini kaydettik. Atölye yerlerin ayrıldı; kişisel kodunla yeniden giriş yapıp planını değiştirebilirsin.",
+                      )
+                    : t(
+                        "Seçimlerini kaydettik. Kişisel kodunla yeniden giriş yapıp planını değiştirebilirsin.",
+                      )}
               </p>
+              {(waitingFor.length > 0 || (fortuneWaitlist && !slot)) && (
+                <p className="gp-waitlist-note" role="status">
+                  {t(
+                    "Bekleme listesine eklendin. Yer açılırsa sana haber verip yerini ayarlayacağız.",
+                  )}
+                </p>
+              )}
               <div className="gp-hint">
                 <strong>{t("19 Eylül · Büyükada")}</strong>
                 <p>

@@ -8,7 +8,7 @@ import type { GuestPlan } from '../lib/guest/types';
 test('seat transactions: concurrency, release, rollback, demo and revocation', async () => {
  const sql=guestDb(); const prefix=`test-${randomUUID()}`; const one=prefix+'-one'; const two=prefix+'-two';
  const tickets: {id:string;is_demo:boolean}[]=[];
- const plan=(ids:string[]):GuestPlan=>({transport:'Vapur / motor',origin:'TEST',arrival:'',party:'1',selected:ids,slot:'',allergy:'Yok',allergyNote:'',diet:'Özel bir tercihim yok',note:'',consent:true});
+ const plan=(ids:string[],waitlist:string[]=[],fortuneWaitlist=false):GuestPlan=>({transport:'Vapur / motor',origin:'TEST',arrival:'',party:'1',selected:ids,slot:'',waitlist,fortuneWaitlist,allergy:'Yok',allergyNote:'',diet:'Özel bir tercihim yok',note:'',consent:true});
  try {
   await sql`INSERT INTO guest_event.workshops(id,capacity,enabled) VALUES (${one},1,true),(${two},1,true)`;
   for(let i=0;i<3;i++){const [t]=await sql`INSERT INTO guest_event.tickets(name,code_hash,is_demo) VALUES (${prefix},${randomUUID()},${i===2}) RETURNING id,is_demo`; tickets.push(t as {id:string;is_demo:boolean});}
@@ -23,6 +23,16 @@ test('seat transactions: concurrency, release, rollback, demo and revocation', a
   await persistGuestPlan(winner,plan([]));
   await persistGuestPlan(loser,plan([one]));
   [count]=await sql`SELECT count(*)::int AS n FROM guest_event.reservations WHERE workshop_id=${two}`;assert.equal(count.n,0,'changing choices releases the previous seat');
+  // Waitlist: joining keeps its order, re-saving keeps the row, reserving a place or dropping it removes the row.
+  await persistGuestPlan(winner,plan([],[two],true));
+  let waiting=await sql`SELECT target FROM guest_event.waitlist WHERE ticket_id=${winner.id} ORDER BY created_at`;assert.deepEqual(waiting.map(w=>w.target),[two,'fortune']);
+  const [first]=await sql`SELECT created_at FROM guest_event.waitlist WHERE ticket_id=${winner.id} AND target=${two}`;
+  await persistGuestPlan(winner,plan([],[two],true));
+  const [again]=await sql`SELECT created_at FROM guest_event.waitlist WHERE ticket_id=${winner.id} AND target=${two}`;assert.equal(String(again.created_at),String(first.created_at),'re-saving keeps the waitlist position');
+  await persistGuestPlan(winner,plan([],[],false));
+  waiting=await sql`SELECT target FROM guest_event.waitlist WHERE ticket_id=${winner.id}`;assert.equal(waiting.length,0,'leaving the waitlist removes the rows');
+  await persistGuestPlan(tickets[2],plan([two],[one],true));
+  waiting=await sql`SELECT target FROM guest_event.waitlist WHERE ticket_id=${tickets[2].id}`;assert.equal(waiting.length,0,'demo never joins the real waitlist');
   await persistGuestPlan(tickets[2],plan([two]));
   [count]=await sql`SELECT count(*)::int AS n FROM guest_event.reservations WHERE ticket_id=${tickets[2].id}`;assert.equal(count.n,0,'demo never occupies real seats');
   await sql`UPDATE guest_event.tickets SET active=false WHERE id=${winner.id}`;

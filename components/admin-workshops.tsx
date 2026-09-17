@@ -3,17 +3,20 @@
 import { useRef, useState } from "react";
 import { removeWorkshopParticipant } from "@/app/yonetim/actions";
 import { useAction } from "@/hooks/use-action";
-import type { AdminWorkshop } from "@/lib/guest/admin-types";
+import type { AdminWorkshop, WaitlistEntry } from "@/lib/guest/admin-types";
 
 export function AdminWorkshops({
   workshops,
   names,
+  waitlist,
   refresh,
 }: {
   workshops: AdminWorkshop[];
   names: Record<string, string>;
+  waitlist: WaitlistEntry[];
   refresh: () => Promise<void>;
 }) {
+  const waiting = (id: string) => waitlist.filter((w) => w.target === id);
   const [selected, setSelected] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const { busy, error, setError, run } = useAction();
@@ -80,6 +83,8 @@ export function AdminWorkshops({
                       ? "Kontenjan sınırı yok"
                       : `${Math.max(0, w.capacity - w.booked)} yer kaldı`
                     : "Kapalı"}
+                  {waiting(id).length > 0 &&
+                    ` · ${waiting(id).length} kişi bekleme listesinde`}
                 </span>
               </div>
               <progress
@@ -123,6 +128,19 @@ export function AdminWorkshops({
               </ul>
             ) : (
               <p>Bu atölyede henüz katılımcı yok.</p>
+            )}
+            {waiting(selected).length > 0 && (
+              <p className="ad-waitlist">
+                <strong>Bekleme listesi (katılım sırasıyla):</strong>{" "}
+                {waiting(selected)
+                  .map((w, i) => `${i + 1}. ${w.name}`)
+                  .join(" · ")}
+                <br />
+                <small>
+                  Yer açılınca sıradaki kişiye haber ver; kişi planına girip
+                  atölyeyi seçtiğinde listeden çıkar.
+                </small>
+              </p>
             )}
             <p className="ad-note">
               Burada aktif, gerçek rezervasyonlar listelenir. Çıkarma işlemi
