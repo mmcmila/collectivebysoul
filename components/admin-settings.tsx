@@ -2,6 +2,8 @@
 import { useState } from "react";
 import { changeAdminPassword } from "@/app/yonetim/actions";
 import { useAction } from "@/hooks/use-action";
+import Link from "next/link";
+import { StaffCodes } from "@/components/staff-codes";
 export function AdminSettings() {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
@@ -93,6 +95,13 @@ export function AdminSettings() {
           {busy ? "Kaydediliyor…" : "Şifremi değiştir"}
         </button>
       </form>
+      <div className="ad-section-heading ad-staff-heading">
+        <h2 id="staff-title">Açık Hesap girişleri</h2>
+        <Link href="/yonetim/hesap" className="ad-module-link">
+          Açık Hesap’ı aç →
+        </Link>
+      </div>
+      <StaffCodes />
     </section>
   );
 }

@@ -853,3 +853,11 @@
     width: 100%;
   }
 }
+.ad-staff-heading {
+  margin-top: 36px;
+  padding-top: 24px;
+  border-top: 1px solid #dfe1d7;
+}
+.ad-staff-heading h2 {
+  font-size: 22px;
+}
