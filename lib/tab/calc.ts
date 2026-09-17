@@ -474,7 +474,7 @@ export function describeAudit(entry: Pick<AuditEntry, "action" | "record" | "gue
   const guest = entry.guestName ?? "Silinmiş misafir";
   const str = (key: string) => (typeof r[key] === "string" ? (r[key] as string) : "");
   if (entry.action === "staff.create")
-    return `Personel girişi oluşturuldu: ${str("name")} (${str("role") === "pizza" ? "Pizza" : "Bar"})`;
+    return `Personel girişi oluşturuldu: ${str("name")} (${str("role") === "pizza" ? "Yemek" : "Bar"})`;
   if (entry.action === "staff.rename")
     return `Personel adı değişti: ${str("from")} → ${str("to")}`;
   if (entry.action === "staff.code")

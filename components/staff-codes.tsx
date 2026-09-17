@@ -248,7 +248,7 @@ export function StaffCodes() {
           onChange={(e) => setRole(e.target.value === "pizza" ? "pizza" : "bar")}
         >
           <option value="bar">Bar</option>
-          <option value="pizza">Pizza</option>
+          <option value="pizza">Yemek</option>
         </select>
         <button className="ad-primary" disabled={create.busy}>
           {create.busy ? "Oluşturuluyor…" : "Kod oluştur"}

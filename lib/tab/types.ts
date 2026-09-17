@@ -1,4 +1,5 @@
-export const stations = { bar: "Bar", pizza: "Pizza" } as const;
+/** Station ids are fixed ("pizza" also covers hot dogs and other food); labels are what people see. */
+export const stations = { bar: "Bar", pizza: "Yemek" } as const;
 export type Station = keyof typeof stations;
 export const isStation = (value: unknown): value is Station =>
   typeof value === "string" && Object.hasOwn(stations, value);
@@ -6,7 +7,7 @@ export const isStation = (value: unknown): value is Station =>
 export const staffRoles = {
   admin: "Yönetici",
   bar: "Bar",
-  pizza: "Pizza",
+  pizza: "Yemek",
 } as const;
 export type StaffRole = keyof typeof staffRoles;
 export const isStaffRole = (value: unknown): value is StaffRole =>

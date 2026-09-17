@@ -147,107 +147,133 @@ export function TabSettings({
         Ayarlar
       </h1>
 
-      <section className="tab-card" aria-labelledby="tab-menu-title">
-        <h2 id="tab-menu-title">Menü</h2>
+      <details className="tab-card tab-collapsible">
+        <summary>
+          <h2>Menü</h2>
+          <span>
+            {rows.filter((r) => r.active).length} aktif ürün
+            {dirty && " · kaydedilmemiş değişiklik"}
+          </span>
+        </summary>
         <p className="ad-note">
-          Fiyatlar ₺ cinsinden. İstasyon, ürünün satıldığı nokta. Pasif ürünler
-          menüde görünmez; geçmiş satırlar fiyat değişikliğinden etkilenmez.
+          Fiyatlar ₺ cinsinden. Pasif ürünler menüde görünmez; geçmiş satırlar
+          fiyat değişikliğinden etkilenmez. Yemek bölümü pizza, hot dog ve
+          diğer yiyecekler içindir.
         </p>
-        <div className="tab-menu-edit">
-          {rows.map((row, index) => (
-            <div key={row.key} className={`tab-menu-row ${row.active ? "" : "passive"}`}>
-              <label>
-                <span>Ürün</span>
-                <input
-                  value={row.name}
-                  maxLength={80}
-                  placeholder="Ürün adı"
-                  aria-label={`${index + 1}. ürün adı`}
-                  onChange={(e) => edit(row.key, { name: e.target.value })}
-                />
-              </label>
-              <label>
-                <span>Fiyat ₺</span>
-                <input
-                  inputMode="decimal"
-                  value={row.price}
-                  placeholder="0"
-                  aria-label={`${row.name || index + 1 + ". ürün"} fiyatı`}
-                  onChange={(e) => edit(row.key, { price: e.target.value })}
-                />
-              </label>
-              <label>
-                <span>İstasyon</span>
-                <select
-                  value={row.station}
-                  aria-label={`${row.name || index + 1 + ". ürün"} istasyonu`}
-                  onChange={(e) =>
-                    edit(row.key, { station: e.target.value as Station })
-                  }
-                >
-                  {(Object.keys(stations) as Station[]).map((s) => (
-                    <option key={s} value={s}>
-                      {stations[s]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="tab-row-actions">
-                <button
-                  type="button"
-                  className="tab-chip"
-                  aria-pressed={row.active}
-                  onClick={() => edit(row.key, { active: !row.active })}
-                >
-                  {row.active ? "Aktif" : "Pasif"}
-                </button>
-                <button
-                  type="button"
-                  className="tab-x"
-                  aria-label={`${row.name || "ürün"} sil`}
-                  disabled={menuAction.busy}
-                  onClick={() => {
-                    if (row.id === null)
-                      return setDraft(rows.filter((r) => r.key !== row.key));
-                    if (!window.confirm(`${row.name} menüden silinsin mi? Geçmiş satışlar korunur.`))
-                      return;
-                    void menuAction.run(
-                      "Bağlantı kesildi.",
-                      () => deleteMenuItem(row.id as string),
-                      async () => {
-                        setDraft(null);
-                        notify("Ürün silindi");
-                        await refresh();
-                      },
-                    );
-                  }}
-                >
-                  ✕
-                </button>
+        {(Object.keys(stations) as Station[]).map((station) => {
+          const group = rows.filter((r) => r.station === station);
+          return (
+            <details key={station} className="tab-menu-group" open>
+              <summary>
+                <strong>{stations[station]} menüsü</strong>
+                <span>{group.length} ürün</span>
+              </summary>
+              <div className="tab-menu-edit">
+                {group.map((row, index) => (
+                  <div
+                    key={row.key}
+                    className={`tab-menu-row ${row.active ? "" : "passive"}`}
+                  >
+                    <label>
+                      <span>Ürün</span>
+                      <input
+                        value={row.name}
+                        maxLength={80}
+                        placeholder="Ürün adı"
+                        aria-label={`${stations[station]} ${index + 1}. ürün adı`}
+                        onChange={(e) => edit(row.key, { name: e.target.value })}
+                      />
+                    </label>
+                    <label>
+                      <span>Fiyat ₺</span>
+                      <input
+                        inputMode="decimal"
+                        value={row.price}
+                        placeholder="0"
+                        aria-label={`${row.name || index + 1 + ". ürün"} fiyatı`}
+                        onChange={(e) => edit(row.key, { price: e.target.value })}
+                      />
+                    </label>
+                    <label>
+                      <span>Bölüm</span>
+                      <select
+                        value={row.station}
+                        aria-label={`${row.name || index + 1 + ". ürün"} bölümü`}
+                        onChange={(e) =>
+                          edit(row.key, { station: e.target.value as Station })
+                        }
+                      >
+                        {(Object.keys(stations) as Station[]).map((s) => (
+                          <option key={s} value={s}>
+                            {stations[s]}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="tab-row-actions">
+                      <button
+                        type="button"
+                        className="tab-chip"
+                        aria-pressed={row.active}
+                        onClick={() => edit(row.key, { active: !row.active })}
+                      >
+                        {row.active ? "Aktif" : "Pasif"}
+                      </button>
+                      <button
+                        type="button"
+                        className="tab-x"
+                        aria-label={`${row.name || "ürün"} sil`}
+                        disabled={menuAction.busy}
+                        onClick={() => {
+                          if (row.id === null)
+                            return setDraft(rows.filter((r) => r.key !== row.key));
+                          if (
+                            !window.confirm(
+                              `${row.name} menüden silinsin mi? Geçmiş satışlar korunur.`,
+                            )
+                          )
+                            return;
+                          void menuAction.run(
+                            "Bağlantı kesildi.",
+                            () => deleteMenuItem(row.id as string),
+                            async () => {
+                              setDraft(null);
+                              notify("Ürün silindi");
+                              await refresh();
+                            },
+                          );
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {!group.length && <p className="ad-note">Bu bölümde ürün yok.</p>}
               </div>
-            </div>
-          ))}
-        </div>
+              <button
+                type="button"
+                className="tab-secondary"
+                onClick={() =>
+                  setDraft([
+                    ...rows,
+                    {
+                      key: "new-" + crypto.randomUUID(),
+                      id: null,
+                      name: "",
+                      price: "",
+                      station,
+                      active: true,
+                    },
+                  ])
+                }
+              >
+                + {stations[station]} ürünü
+              </button>
+            </details>
+          );
+        })}
         <div className="tab-row">
-          <button
-            type="button"
-            className="tab-secondary"
-            onClick={() =>
-              setDraft([
-                ...rows,
-                {
-                  key: "new-" + crypto.randomUUID(),
-                  id: null,
-                  name: "",
-                  price: "",
-                  station: "bar",
-                  active: true,
-                },
-              ])
-            }
-          >
-            + Ürün
-          </button>
           <button
             className="ad-primary"
             disabled={menuAction.busy || !dirty}
@@ -261,7 +287,7 @@ export function TabSettings({
             {menuAction.error}
           </p>
         )}
-      </section>
+      </details>
 
       <section className="tab-card" aria-labelledby="tab-iban-title">
         <h2 id="tab-iban-title">IBAN hesapları</h2>
