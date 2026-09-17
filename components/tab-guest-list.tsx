@@ -131,7 +131,10 @@ export function TabGuestList({
                 <span className="tab-guest-name">{g.name}</span>
                 <span className="tab-guest-sub">
                   {g.category && `${guestCategories[g.category]} · `}
-                  {g.count} kalem · {formatMoney(g.total)} toplam
+                  {g.active
+                    ? `${g.count} kalem · ${formatMoney(g.total)} toplam`
+                    : "Hesap açılmadı"}
+                  {g.round > 1 && ` · ${g.round}. hesap`}
                   {g.discountPercent > 0 && ` · %${g.discountPercent} indirim`}
                   {g.discountPercent === 0 && g.discount > 0 && " · indirimli kalemler var"}
                 </span>
@@ -150,11 +153,18 @@ export function TabGuestList({
           </li>
         ))}
       </ul>
+      {filter === "open" && !query.trim() && (
+        <p className="ad-note">
+          Hesabı henüz açılmamış misafirler “Hepsi”nde; aramada herkes çıkar.
+        </p>
+      )}
       {!rows.length && (
         <div className="ad-empty">
           <p>
             {data.guests.length
-              ? "Bu filtreye uygun misafir yok."
+              ? filter === "open" && !query.trim()
+                ? "Şu an açık hesap yok. Bir misafir arayıp hesabını açabilirsin."
+                : "Bu filtreye uygun misafir yok."
               : "Henüz misafir yok. “+ Misafir” ile ekle; yönetici Ayarlar’dan toplu liste de yapıştırabilir."}
           </p>
           {query.trim().length > 0 &&

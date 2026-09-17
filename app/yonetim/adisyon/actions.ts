@@ -57,12 +57,13 @@ type Tx = postgres.TransactionSql;
 /** Locks the guest row so balance checks and status changes are serialised per guest. */
 async function lockGuest(tx: Tx, guestId: string) {
   const [guest] =
-    await tx`SELECT g.id,g.name,g.status,g.discount_percent,t.category FROM guest_event.tab_guests g LEFT JOIN guest_event.tickets t ON t.id=g.ticket_id WHERE g.id=${guestId} FOR UPDATE OF g`;
+    await tx`SELECT g.id,g.name,g.status,g.round,g.discount_percent,t.category FROM guest_event.tab_guests g LEFT JOIN guest_event.tickets t ON t.id=g.ticket_id WHERE g.id=${guestId} FOR UPDATE OF g`;
   if (!guest) throw new UserError("Bu misafir silinmiş. Listeyi yenile.");
   return guest as {
     id: string;
     name: string;
     status: TabStatus;
+    round: number;
     discount_percent: number | null;
     category: string | null;
   };
@@ -82,12 +83,13 @@ async function currentDiscount(
   ).percent;
 }
 
-async function balance(tx: Tx, guestId: string) {
+/** Balance of the guest's current round only; closed rounds are settled history. */
+async function balance(tx: Tx, guestId: string, round: number) {
   const lines = await tx<
-    { guestId: string; price: number; qty: number; complimentary: boolean; discountPercent: number }[]
-  >`SELECT guest_id AS "guestId",price,qty,complimentary,discount_percent AS "discountPercent" FROM guest_event.tab_lines WHERE guest_id=${guestId}`;
-  const payments = await tx<{ guestId: string; amount: number }[]>`SELECT guest_id AS "guestId",amount FROM guest_event.tab_payments WHERE guest_id=${guestId}`;
-  return guestTotals(lines, payments, guestId);
+    { guestId: string; price: number; qty: number; complimentary: boolean; discountPercent: number; round: number }[]
+  >`SELECT guest_id AS "guestId",price,qty,complimentary,discount_percent AS "discountPercent",round FROM guest_event.tab_lines WHERE guest_id=${guestId} AND round=${round}`;
+  const payments = await tx<{ guestId: string; amount: number; round: number }[]>`SELECT guest_id AS "guestId",amount,round FROM guest_event.tab_payments WHERE guest_id=${guestId} AND round=${round}`;
+  return guestTotals(lines, payments, guestId, round);
 }
 
 async function audit(
@@ -185,13 +187,19 @@ export async function addTabLine(guestId: string, menuItemId: string) {
       // Always a new row: two stations adding at once never overwrite each other.
       // The discount in force now is copied onto the line and never changes.
       const discountPercent = await currentDiscount(tx, guest);
-      const [line] =
-        await tx`INSERT INTO guest_event.tab_lines(guest_id,menu_item_id,name,price,qty,station,discount_percent,created_by) VALUES(${guestId},${item.id},${item.name},${item.price},1,${item.station},${discountPercent},${user.id}) RETURNING id,created_at`;
+      // Reopening a closed tab starts a new round on the same profile; the
+      // closed round stays as history.
       let status: TabStatus = guest.status;
+      let round = guest.round;
       if (status === "closed") {
         status = "open";
-        await tx`UPDATE guest_event.tab_guests SET status='open' WHERE id=${guestId}`;
+        const [prev] =
+          await tx`SELECT count(*)::int AS n FROM guest_event.tab_lines WHERE guest_id=${guestId} AND round=${guest.round}`;
+        if (prev.n > 0) round = guest.round + 1;
+        await tx`UPDATE guest_event.tab_guests SET status='open',round=${round} WHERE id=${guestId}`;
       }
+      const [line] =
+        await tx`INSERT INTO guest_event.tab_lines(guest_id,menu_item_id,name,price,qty,station,discount_percent,round,created_by) VALUES(${guestId},${item.id},${item.name},${item.price},1,${item.station},${discountPercent},${round},${user.id}) RETURNING id,created_at`;
       const created: TabLine = {
         id: line.id,
         guestId,
@@ -202,6 +210,7 @@ export async function addTabLine(guestId: string, menuItemId: string) {
         station: item.station,
         complimentary: false,
         discountPercent,
+        round,
         createdBy: user.id,
         createdByName: user.name,
         createdAt: line.created_at.toISOString(),
@@ -221,12 +230,15 @@ export async function deleteTabLine(lineId: string) {
   try {
     await guestDb().begin(async (tx) => {
       const [line] =
-        await tx`SELECT id,guest_id,menu_item_id,name,price,qty,station,complimentary,created_by,created_at FROM guest_event.tab_lines WHERE id=${lineId} FOR UPDATE`;
+        await tx`SELECT id,guest_id,menu_item_id,name,price,qty,station,complimentary,round,created_by,created_at FROM guest_event.tab_lines WHERE id=${lineId} FOR UPDATE`;
       if (!line) throw new UserError("Bu kalem zaten silinmiş.");
       if (!canDeleteRecord(user, { createdBy: line.created_by }))
         throw new UserError(
           "Sadece kalemi giren kişi veya yönetici silebilir.",
         );
+      const owner = await lockGuest(tx, line.guest_id);
+      if (line.round !== owner.round)
+        throw new UserError("Kapanmış eski hesaba ait kalem değiştirilemez.");
       await audit(tx, user, "line.delete", line.guest_id, line);
       await tx`DELETE FROM guest_event.tab_lines WHERE id=${lineId}`;
     });
@@ -253,7 +265,7 @@ export async function addTabPayment(
     return fail(null, "Hangi IBAN'a ödendiğini seç.");
   try {
     const result = await guestDb().begin(async (tx) => {
-      await lockGuest(tx, guestId);
+      const guest = await lockGuest(tx, guestId);
       let account: { id: string; label: string } | null = null;
       if (method === "iban") {
         const [row] =
@@ -261,7 +273,7 @@ export async function addTabPayment(
         if (!row) throw new UserError("Bu IBAN artık kullanımda değil. Ayarları yenile.");
         account = { id: row.id, label: row.label };
       }
-      const { due } = await balance(tx, guestId);
+      const { due } = await balance(tx, guestId, guest.round);
       const resolved = resolvePaymentAmount(amount, due);
       if ("error" in resolved) throw new UserError(resolved.error);
       if (close === true && due - resolved.amount > 0)
@@ -269,7 +281,7 @@ export async function addTabPayment(
           "Bu tutar kalanı kapatmıyor. Kalanın tamamını al veya hesabı açık bırak.",
         );
       const [payment] =
-        await tx`INSERT INTO guest_event.tab_payments(guest_id,amount,method,bank_account_id,created_by) VALUES(${guestId},${resolved.amount},${method},${account?.id ?? null},${user.id}) RETURNING id,created_at`;
+        await tx`INSERT INTO guest_event.tab_payments(guest_id,amount,method,bank_account_id,round,created_by) VALUES(${guestId},${resolved.amount},${method},${account?.id ?? null},${guest.round},${user.id}) RETURNING id,created_at`;
       const status = statusAfterPayment(due - resolved.amount, close === true);
       // A recorded payment ends any "will pay by IBAN later" state.
       await tx`UPDATE guest_event.tab_guests SET status=${status},pending_method=NULL,pending_account_id=NULL WHERE id=${guestId}`;
@@ -280,6 +292,7 @@ export async function addTabPayment(
         method,
         accountId: account?.id ?? null,
         accountLabel: account?.label ?? null,
+        round: guest.round,
         createdBy: user.id,
         createdByName: user.name,
         createdAt: payment.created_at.toISOString(),
@@ -299,16 +312,18 @@ export async function deleteTabPayment(paymentId: string) {
   try {
     await guestDb().begin(async (tx) => {
       const [payment] =
-        await tx`SELECT id,guest_id,amount,method,bank_account_id,created_by,created_at FROM guest_event.tab_payments WHERE id=${paymentId} FOR UPDATE`;
+        await tx`SELECT id,guest_id,amount,method,bank_account_id,round,created_by,created_at FROM guest_event.tab_payments WHERE id=${paymentId} FOR UPDATE`;
       if (!payment) throw new UserError("Bu ödeme zaten silinmiş.");
       if (!canDeleteRecord(user, { createdBy: payment.created_by }))
         throw new UserError(
           "Sadece ödemeyi alan kişi veya yönetici silebilir.",
         );
       const guest = await lockGuest(tx, payment.guest_id);
+      if (payment.round !== guest.round)
+        throw new UserError("Kapanmış eski hesaba ait ödeme değiştirilemez.");
       await audit(tx, user, "payment.delete", payment.guest_id, payment);
       await tx`DELETE FROM guest_event.tab_payments WHERE id=${paymentId}`;
-      const { due } = await balance(tx, payment.guest_id);
+      const { due } = await balance(tx, payment.guest_id, guest.round);
       const status = statusAfterPaymentRemoved(guest.status, due);
       if (status !== guest.status)
         await tx`UPDATE guest_event.tab_guests SET status=${status} WHERE id=${payment.guest_id}`;
@@ -325,8 +340,8 @@ export async function closeTabGuest(guestId: string) {
   if (!isUuid(guestId)) return fail(null, "Geçersiz misafir.");
   try {
     await guestDb().begin(async (tx) => {
-      await lockGuest(tx, guestId);
-      const { due } = await balance(tx, guestId);
+      const guest = await lockGuest(tx, guestId);
+      const { due } = await balance(tx, guestId, guest.round);
       if (due > 0)
         throw new UserError("Kalan borç varken hesap kapatılamaz. Önce ödeme al.");
       await tx`UPDATE guest_event.tab_guests SET status='closed',pending_method=NULL,pending_account_id=NULL WHERE id=${guestId}`;
@@ -450,10 +465,13 @@ export async function setLineComplimentary(lineId: string, complimentary: boolea
   try {
     await guestDb().begin(async (tx) => {
       const [line] =
-        await tx`SELECT id,guest_id,name,price,qty,created_by FROM guest_event.tab_lines WHERE id=${lineId} FOR UPDATE`;
+        await tx`SELECT id,guest_id,name,price,qty,round,created_by FROM guest_event.tab_lines WHERE id=${lineId} FOR UPDATE`;
       if (!line) throw new UserError("Bu kalem silinmiş.");
       if (!canDeleteRecord(user, { createdBy: line.created_by }))
         throw new UserError("Sadece kalemi giren kişi veya yönetici ikram yapabilir.");
+      const owner = await lockGuest(tx, line.guest_id);
+      if (line.round !== owner.round)
+        throw new UserError("Kapanmış eski hesaba ait kalem değiştirilemez.");
       await tx`UPDATE guest_event.tab_lines SET complimentary=${complimentary} WHERE id=${lineId}`;
       await audit(tx, user, "line.complimentary", line.guest_id, {
         ...line,

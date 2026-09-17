@@ -137,6 +137,12 @@ UPDATE guest_event.tab_guests SET discount_percent=NULL WHERE discount_percent=0
  AND NOT EXISTS (SELECT 1 FROM guest_event.settings WHERE key='line_discount_backfill');
 INSERT INTO guest_event.settings(key,value) VALUES ('line_discount_backfill','1') ON CONFLICT DO NOTHING;
 
+-- Rounds: a closed tab that is reopened starts round n+1 on the same guest;
+-- earlier rounds stay on the profile as history.
+ALTER TABLE guest_event.tab_guests ADD COLUMN IF NOT EXISTS round integer NOT NULL DEFAULT 1 CHECK (round >= 1);
+ALTER TABLE guest_event.tab_lines ADD COLUMN IF NOT EXISTS round integer NOT NULL DEFAULT 1 CHECK (round >= 1);
+ALTER TABLE guest_event.tab_payments ADD COLUMN IF NOT EXISTS round integer NOT NULL DEFAULT 1 CHECK (round >= 1);
+
 REVOKE ALL ON guest_event.tab_guests, guest_event.menu_items, guest_event.tab_lines,
  guest_event.tab_payments, guest_event.tab_audit, guest_event.settings, guest_event.bank_accounts,
  guest_event.discount_rules
