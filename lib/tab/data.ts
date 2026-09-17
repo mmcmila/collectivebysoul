@@ -17,11 +17,11 @@ export async function loadTabData(user: StaffUser): Promise<TabData> {
   // pooler stalls when this app opens several connections at once, and
   // each query is small (~150 ms), so sequential is both safe and fast.
   const guests =
-    await sql`SELECT g.id,g.name,g.status,g.created_at,t.category FROM guest_event.tab_guests g LEFT JOIN guest_event.tickets t ON t.id=g.ticket_id ORDER BY g.name`;
+    await sql`SELECT g.id,g.name,g.status,g.created_at,g.discount_percent,g.pending_method,g.pending_account_id,b.label AS pending_account_label,t.category FROM guest_event.tab_guests g LEFT JOIN guest_event.tickets t ON t.id=g.ticket_id LEFT JOIN guest_event.bank_accounts b ON b.id=g.pending_account_id ORDER BY g.name`;
   const menu =
     await sql`SELECT id,name,price,station,active,sort_order FROM guest_event.menu_items ORDER BY sort_order,name`;
   const lines =
-    await sql`SELECT l.id,l.guest_id,l.menu_item_id,l.name,l.price,l.qty,l.station,l.created_by,COALESCE(a.name,'') AS created_by_name,l.created_at FROM guest_event.tab_lines l LEFT JOIN guest_event.admins a ON a.id=l.created_by ORDER BY l.created_at DESC`;
+    await sql`SELECT l.id,l.guest_id,l.menu_item_id,l.name,l.price,l.qty,l.station,l.complimentary,l.created_by,COALESCE(a.name,'') AS created_by_name,l.created_at FROM guest_event.tab_lines l LEFT JOIN guest_event.admins a ON a.id=l.created_by ORDER BY l.created_at DESC`;
   const payments =
     await sql`SELECT p.id,p.guest_id,p.amount,p.method,p.bank_account_id,b.label AS account_label,p.created_by,COALESCE(a.name,'') AS created_by_name,p.created_at FROM guest_event.tab_payments p LEFT JOIN guest_event.admins a ON a.id=p.created_by LEFT JOIN guest_event.bank_accounts b ON b.id=p.bank_account_id ORDER BY p.created_at`;
   const accounts =
@@ -37,6 +37,10 @@ export async function loadTabData(user: StaffUser): Promise<TabData> {
         name: g.name,
         status: g.status,
         category: g.category ?? null,
+        discountPercent: g.discount_percent,
+        pendingMethod: g.pending_method,
+        pendingAccountId: g.pending_account_id,
+        pendingAccountLabel: g.pending_account_label,
         createdAt: g.created_at.toISOString(),
       }),
     ),
@@ -59,6 +63,7 @@ export async function loadTabData(user: StaffUser): Promise<TabData> {
         price: l.price,
         qty: l.qty,
         station: l.station,
+        complimentary: l.complimentary,
         createdBy: l.created_by,
         createdByName: l.created_by_name,
         createdAt: l.created_at.toISOString(),

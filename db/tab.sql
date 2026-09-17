@@ -108,6 +108,12 @@ WHERE t.active AND NOT t.is_demo
  AND NOT EXISTS (SELECT 1 FROM guest_event.tab_guests g WHERE g.ticket_id=t.id);
 INSERT INTO guest_event.settings(key,value) VALUES ('tab_backfill_done','1') ON CONFLICT DO NOTHING;
 
+-- Discounts per guest, complimentary lines, and "will pay by IBAN later" state.
+ALTER TABLE guest_event.tab_guests ADD COLUMN IF NOT EXISTS discount_percent integer NOT NULL DEFAULT 0 CHECK (discount_percent BETWEEN 0 AND 100);
+ALTER TABLE guest_event.tab_guests ADD COLUMN IF NOT EXISTS pending_method text CHECK (pending_method IN ('iban'));
+ALTER TABLE guest_event.tab_guests ADD COLUMN IF NOT EXISTS pending_account_id uuid REFERENCES guest_event.bank_accounts(id) ON DELETE SET NULL;
+ALTER TABLE guest_event.tab_lines ADD COLUMN IF NOT EXISTS complimentary boolean NOT NULL DEFAULT false;
+
 REVOKE ALL ON guest_event.tab_guests, guest_event.menu_items, guest_event.tab_lines,
  guest_event.tab_payments, guest_event.tab_audit, guest_event.settings, guest_event.bank_accounts
  FROM PUBLIC, anon, authenticated;

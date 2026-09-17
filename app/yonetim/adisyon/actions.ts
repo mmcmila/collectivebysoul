@@ -55,15 +55,22 @@ type Tx = postgres.TransactionSql;
 /** Locks the guest row so balance checks and status changes are serialised per guest. */
 async function lockGuest(tx: Tx, guestId: string) {
   const [guest] =
-    await tx`SELECT id,name,status FROM guest_event.tab_guests WHERE id=${guestId} FOR UPDATE`;
+    await tx`SELECT id,name,status,discount_percent FROM guest_event.tab_guests WHERE id=${guestId} FOR UPDATE`;
   if (!guest) throw new UserError("Bu misafir silinmiş. Listeyi yenile.");
-  return guest as { id: string; name: string; status: TabStatus };
+  return guest as {
+    id: string;
+    name: string;
+    status: TabStatus;
+    discount_percent: number;
+  };
 }
 
-async function balance(tx: Tx, guestId: string) {
-  const lines = await tx<{ guestId: string; price: number; qty: number }[]>`SELECT guest_id AS "guestId",price,qty FROM guest_event.tab_lines WHERE guest_id=${guestId}`;
+async function balance(tx: Tx, guestId: string, discountPercent: number) {
+  const lines = await tx<
+    { guestId: string; price: number; qty: number; complimentary: boolean }[]
+  >`SELECT guest_id AS "guestId",price,qty,complimentary FROM guest_event.tab_lines WHERE guest_id=${guestId}`;
   const payments = await tx<{ guestId: string; amount: number }[]>`SELECT guest_id AS "guestId",amount FROM guest_event.tab_payments WHERE guest_id=${guestId}`;
-  return guestTotals(lines, payments, guestId);
+  return guestTotals(lines, payments, guestId, discountPercent);
 }
 
 async function audit(
@@ -130,7 +137,7 @@ export async function deleteTabGuest(guestId: string) {
     await guestDb().begin(async (tx) => {
       const guest = await lockGuest(tx, guestId);
       const lines =
-        await tx`SELECT id,name,price,qty,station,created_by,created_at FROM guest_event.tab_lines WHERE guest_id=${guestId}`;
+        await tx`SELECT id,name,price,qty,station,complimentary,created_by,created_at FROM guest_event.tab_lines WHERE guest_id=${guestId}`;
       const payments =
         await tx`SELECT id,amount,method,created_by,created_at FROM guest_event.tab_payments WHERE guest_id=${guestId}`;
       await audit(tx, user, "guest.delete", guestId, {
@@ -174,6 +181,7 @@ export async function addTabLine(guestId: string, menuItemId: string) {
         price: item.price,
         qty: 1,
         station: item.station,
+        complimentary: false,
         createdBy: user.id,
         createdByName: user.name,
         createdAt: line.created_at.toISOString(),
@@ -193,7 +201,7 @@ export async function deleteTabLine(lineId: string) {
   try {
     await guestDb().begin(async (tx) => {
       const [line] =
-        await tx`SELECT id,guest_id,menu_item_id,name,price,qty,station,created_by,created_at FROM guest_event.tab_lines WHERE id=${lineId} FOR UPDATE`;
+        await tx`SELECT id,guest_id,menu_item_id,name,price,qty,station,complimentary,created_by,created_at FROM guest_event.tab_lines WHERE id=${lineId} FOR UPDATE`;
       if (!line) throw new UserError("Bu kalem zaten silinmiş.");
       if (!canDeleteRecord(user, { createdBy: line.created_by }))
         throw new UserError(
@@ -213,6 +221,7 @@ export async function addTabPayment(
   amount: number | null,
   method: string,
   accountId: string | null = null,
+  close = false,
 ) {
   const user = await currentAdmin();
   if (!user) return fail(null, SESSION_ERROR);
@@ -224,7 +233,7 @@ export async function addTabPayment(
     return fail(null, "Hangi IBAN'a ödendiğini seç.");
   try {
     const result = await guestDb().begin(async (tx) => {
-      await lockGuest(tx, guestId);
+      const guest = await lockGuest(tx, guestId);
       let account: { id: string; label: string } | null = null;
       if (method === "iban") {
         const [row] =
@@ -232,13 +241,18 @@ export async function addTabPayment(
         if (!row) throw new UserError("Bu IBAN artık kullanımda değil. Ayarları yenile.");
         account = { id: row.id, label: row.label };
       }
-      const { due } = await balance(tx, guestId);
+      const { due } = await balance(tx, guestId, guest.discount_percent);
       const resolved = resolvePaymentAmount(amount, due);
       if ("error" in resolved) throw new UserError(resolved.error);
+      if (close === true && due - resolved.amount > 0)
+        throw new UserError(
+          "Bu tutar kalanı kapatmıyor. Kalanın tamamını al veya hesabı açık bırak.",
+        );
       const [payment] =
         await tx`INSERT INTO guest_event.tab_payments(guest_id,amount,method,bank_account_id,created_by) VALUES(${guestId},${resolved.amount},${method},${account?.id ?? null},${user.id}) RETURNING id,created_at`;
-      const status = statusAfterPayment(due - resolved.amount);
-      await tx`UPDATE guest_event.tab_guests SET status=${status} WHERE id=${guestId}`;
+      const status = statusAfterPayment(due - resolved.amount, close === true);
+      // A recorded payment ends any "will pay by IBAN later" state.
+      await tx`UPDATE guest_event.tab_guests SET status=${status},pending_method=NULL,pending_account_id=NULL WHERE id=${guestId}`;
       const created: TabPayment = {
         id: payment.id,
         guestId,
@@ -274,7 +288,11 @@ export async function deleteTabPayment(paymentId: string) {
       const guest = await lockGuest(tx, payment.guest_id);
       await audit(tx, user, "payment.delete", payment.guest_id, payment);
       await tx`DELETE FROM guest_event.tab_payments WHERE id=${paymentId}`;
-      const { due } = await balance(tx, payment.guest_id);
+      const { due } = await balance(
+        tx,
+        payment.guest_id,
+        guest.discount_percent,
+      );
       const status = statusAfterPaymentRemoved(guest.status, due);
       if (status !== guest.status)
         await tx`UPDATE guest_event.tab_guests SET status=${status} WHERE id=${payment.guest_id}`;
@@ -291,15 +309,137 @@ export async function closeTabGuest(guestId: string) {
   if (!isUuid(guestId)) return fail(null, "Geçersiz misafir.");
   try {
     await guestDb().begin(async (tx) => {
-      await lockGuest(tx, guestId);
-      const { due } = await balance(tx, guestId);
+      const guest = await lockGuest(tx, guestId);
+      const { due } = await balance(tx, guestId, guest.discount_percent);
       if (due > 0)
         throw new UserError("Kalan borç varken hesap kapatılamaz. Önce ödeme al.");
-      await tx`UPDATE guest_event.tab_guests SET status='closed' WHERE id=${guestId}`;
+      await tx`UPDATE guest_event.tab_guests SET status='closed',pending_method=NULL,pending_account_id=NULL WHERE id=${guestId}`;
     });
     return ok({});
   } catch (e) {
     return fail(e, "Hesap kapatılamadı.");
+  }
+}
+
+/** The guest will transfer later: the tab stays open and shows "IBAN bekleniyor". */
+export async function markIbanPending(guestId: string, accountId: string | null) {
+  const user = await currentAdmin();
+  if (!user) return fail(null, SESSION_ERROR);
+  if (!isUuid(guestId) || (accountId !== null && !isUuid(accountId)))
+    return fail(null, "Geçersiz misafir veya IBAN.");
+  try {
+    await guestDb().begin(async (tx) => {
+      await lockGuest(tx, guestId);
+      if (accountId) {
+        const [row] =
+          await tx`SELECT id FROM guest_event.bank_accounts WHERE id=${accountId} AND active`;
+        if (!row) throw new UserError("Bu IBAN artık kullanımda değil.");
+      }
+      await tx`UPDATE guest_event.tab_guests SET status='open',pending_method='iban',pending_account_id=${accountId} WHERE id=${guestId}`;
+    });
+    return ok({});
+  } catch (e) {
+    return fail(e, "Kaydedilemedi.");
+  }
+}
+
+export async function clearPending(guestId: string) {
+  const user = await currentAdmin();
+  if (!user) return fail(null, SESSION_ERROR);
+  if (!isUuid(guestId)) return fail(null, "Geçersiz misafir.");
+  try {
+    await guestDb()`UPDATE guest_event.tab_guests SET pending_method=NULL,pending_account_id=NULL WHERE id=${guestId}`;
+    return ok({});
+  } catch {
+    return fail(null, "Kaydedilemedi.");
+  }
+}
+
+/** Percentage discount for a guest (team, friends, comps). Admin only. */
+export async function setGuestDiscount(guestId: string, percent: number) {
+  const user = await currentOrganiser();
+  if (!user) return fail(null, ADMIN_ERROR);
+  if (
+    !isUuid(guestId) ||
+    typeof percent !== "number" ||
+    !Number.isInteger(percent) ||
+    percent < 0 ||
+    percent > 100
+  )
+    return fail(null, "İndirim 0–100 arasında bir yüzde olmalı.");
+  try {
+    await guestDb().begin(async (tx) => {
+      const guest = await lockGuest(tx, guestId);
+      await tx`UPDATE guest_event.tab_guests SET discount_percent=${percent} WHERE id=${guestId}`;
+      await audit(tx, user, "guest.discount", guestId, {
+        name: guest.name,
+        discountPercent: percent,
+        previous: guest.discount_percent,
+      });
+    });
+    return ok({});
+  } catch (e) {
+    return fail(e, "İndirim kaydedilemedi.");
+  }
+}
+
+/** Marks a line as a free "ikram"; it stays listed but is charged as 0 ₺. */
+export async function setLineComplimentary(lineId: string, complimentary: boolean) {
+  const user = await currentAdmin();
+  if (!user) return fail(null, SESSION_ERROR);
+  if (!isUuid(lineId) || typeof complimentary !== "boolean")
+    return fail(null, "Geçersiz kalem.");
+  try {
+    await guestDb().begin(async (tx) => {
+      const [line] =
+        await tx`SELECT id,guest_id,name,price,qty,created_by FROM guest_event.tab_lines WHERE id=${lineId} FOR UPDATE`;
+      if (!line) throw new UserError("Bu kalem silinmiş.");
+      if (!canDeleteRecord(user, { createdBy: line.created_by }))
+        throw new UserError("Sadece kalemi giren kişi veya yönetici ikram yapabilir.");
+      await tx`UPDATE guest_event.tab_lines SET complimentary=${complimentary} WHERE id=${lineId}`;
+      await audit(tx, user, "line.complimentary", line.guest_id, {
+        ...line,
+        complimentary,
+      });
+    });
+    return ok({});
+  } catch (e) {
+    return fail(e, "Kaydedilemedi.");
+  }
+}
+
+/** Removes a product from the menu; past lines keep their snapshot. Admin only. */
+export async function deleteMenuItem(itemId: string) {
+  const user = await currentOrganiser();
+  if (!user) return fail(null, ADMIN_ERROR);
+  if (!isUuid(itemId)) return fail(null, "Geçersiz ürün.");
+  try {
+    await guestDb()`DELETE FROM guest_event.menu_items WHERE id=${itemId}`;
+    return ok({});
+  } catch {
+    return fail(null, "Ürün silinemedi.");
+  }
+}
+
+/** Removes an IBAN that no payment refers to; otherwise make it passive. Admin only. */
+export async function deleteBankAccount(accountId: string) {
+  const user = await currentOrganiser();
+  if (!user) return fail(null, ADMIN_ERROR);
+  if (!isUuid(accountId)) return fail(null, "Geçersiz IBAN.");
+  try {
+    await guestDb().begin(async (tx) => {
+      const [used] =
+        await tx`SELECT count(*)::int AS n FROM guest_event.tab_payments WHERE bank_account_id=${accountId}`;
+      if (used.n > 0)
+        throw new UserError(
+          "Bu IBAN'a ödeme kaydedilmiş; silmek yerine pasife al.",
+        );
+      await tx`UPDATE guest_event.tab_guests SET pending_account_id=NULL WHERE pending_account_id=${accountId}`;
+      await tx`DELETE FROM guest_event.bank_accounts WHERE id=${accountId}`;
+    });
+    return ok({});
+  } catch (e) {
+    return fail(e, "IBAN silinemedi.");
   }
 }
 

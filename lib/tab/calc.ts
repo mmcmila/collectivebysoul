@@ -12,30 +12,55 @@ import type {
   TabStatus,
 } from "./types";
 
-export type Totals = { total: number; paid: number; due: number; count: number };
+export type Totals = {
+  /** Sum of non-complimentary lines. */
+  subtotal: number;
+  /** Value of complimentary lines (not charged). */
+  complimentary: number;
+  /** Discount applied to the subtotal. */
+  discount: number;
+  /** subtotal − discount. */
+  total: number;
+  paid: number;
+  due: number;
+  count: number;
+};
 
-/** Totals are derived from lines and payments; nothing is stored. */
+/** Totals are derived from lines, payments and the guest's discount; nothing is stored. */
 export function guestTotals(
-  lines: Pick<TabLine, "guestId" | "price" | "qty">[],
+  lines: Pick<TabLine, "guestId" | "price" | "qty" | "complimentary">[],
   payments: Pick<TabPayment, "guestId" | "amount">[],
   guestId: string,
+  discountPercent = 0,
 ): Totals {
-  let total = 0;
+  let subtotal = 0;
+  let complimentary = 0;
   let count = 0;
   for (const line of lines)
     if (line.guestId === guestId) {
-      total += line.price * line.qty;
+      if (line.complimentary) complimentary += line.price * line.qty;
+      else subtotal += line.price * line.qty;
       count += 1;
     }
+  const discount = Math.round((subtotal * discountPercent) / 100);
+  const total = subtotal - discount;
   let paid = 0;
   for (const payment of payments)
     if (payment.guestId === guestId) paid += payment.amount;
-  return { total, paid, due: total - paid, count };
+  return {
+    subtotal,
+    complimentary,
+    discount,
+    total,
+    paid,
+    due: total - paid,
+    count,
+  };
 }
 
-/** Rule: a payment that settles the balance closes the tab. */
-export const statusAfterPayment = (due: number): TabStatus =>
-  due <= 0 ? "closed" : "open";
+/** Rule: a payment closes the tab only when asked to and nothing is left. */
+export const statusAfterPayment = (due: number, close: boolean): TabStatus =>
+  close && due <= 0 ? "closed" : "open";
 
 /** Rule: adding a line to a closed tab reopens it. */
 export const statusAfterLine = (): TabStatus => "open";
@@ -140,13 +165,24 @@ export const canAccessTabs = (role: StaffRole) =>
   role === "admin" || role === "bar" || role === "pizza";
 
 export type Summary = {
+  /** Net sales after complimentary lines and discounts. */
   total: number;
+  /** Gross value of the lines before discounts and complimentary items. */
+  gross: number;
+  discount: number;
+  complimentary: number;
   paid: number;
   due: number;
   byMethod: Record<PaymentMethod, number>;
   byStation: Record<Station, number>;
   /** Sorted by quantity sold, then amount. */
-  byItem: { name: string; qty: number; amount: number; station: Station }[];
+  byItem: {
+    name: string;
+    qty: number;
+    complimentaryQty: number;
+    amount: number;
+    station: Station;
+  }[];
   /** IBAN receipts per account, including inactive accounts that received money. */
   byAccount: { id: string; label: string; iban: string; amount: number; count: number }[];
   debtors: { id: string; name: string; due: number }[];
@@ -161,23 +197,38 @@ export function summarize(
   const byStation: Record<Station, number> = { bar: 0, pizza: 0 };
   const items = new Map<
     string,
-    { name: string; qty: number; amount: number; station: Station }
+    {
+      name: string;
+      qty: number;
+      complimentaryQty: number;
+      amount: number;
+      station: Station;
+    }
   >();
-  let total = 0;
+  let gross = 0;
+  let complimentary = 0;
   for (const line of data.lines) {
-    const amount = line.price * line.qty;
-    total += amount;
+    const value = line.price * line.qty;
+    gross += value;
+    const amount = line.complimentary ? 0 : value;
+    if (line.complimentary) complimentary += value;
     byStation[line.station] += amount;
     const item = items.get(line.name) ?? {
       name: line.name,
       qty: 0,
+      complimentaryQty: 0,
       amount: 0,
       station: line.station,
     };
     item.qty += line.qty;
+    if (line.complimentary) item.complimentaryQty += line.qty;
     item.amount += amount;
     items.set(line.name, item);
   }
+  let discount = 0;
+  for (const g of data.guests)
+    discount += guestTotals(data.lines, [], g.id, g.discountPercent).discount;
+  const total = gross - complimentary - discount;
   let paid = 0;
   const accounts = new Map<
     string,
@@ -212,12 +263,15 @@ export function summarize(
     .map((g) => ({
       id: g.id,
       name: g.name,
-      due: guestTotals(data.lines, data.payments, g.id).due,
+      due: guestTotals(data.lines, data.payments, g.id, g.discountPercent).due,
     }))
     .filter((g) => g.due > 0)
     .sort((a, b) => b.due - a.due || a.name.localeCompare(b.name, "tr"));
   return {
     total,
+    gross,
+    discount,
+    complimentary,
     paid,
     due: total - paid,
     byMethod,
@@ -277,18 +331,37 @@ export function buildCsv(
     entries.push({
       at: line.createdAt,
       row: [
-        "satis",
+        line.complimentary ? "ikram" : "satis",
         guestName.get(line.guestId) ?? "",
         line.name,
         line.qty,
         csvMoney(line.price),
-        csvMoney(line.price * line.qty),
+        csvMoney(line.complimentary ? 0 : line.price * line.qty),
         line.station,
         "",
         line.createdByName,
         csvTime(line.createdAt),
       ],
     });
+  for (const g of data.guests) {
+    const t = guestTotals(data.lines, [], g.id, g.discountPercent);
+    if (t.discount > 0)
+      entries.push({
+        at: g.createdAt,
+        row: [
+          "indirim",
+          g.name,
+          `%${g.discountPercent} indirim`,
+          "",
+          "",
+          csvMoney(-t.discount),
+          "",
+          "",
+          "",
+          csvTime(g.createdAt),
+        ],
+      });
+  }
   for (const payment of data.payments)
     entries.push({
       at: payment.createdAt,
@@ -324,7 +397,10 @@ export function guestRows(
           (filter === "all" || g.status === filter) &&
           matchesSearch(g.name, query),
       )
-      .map((g) => ({ ...g, ...guestTotals(data.lines, data.payments, g.id) })),
+      .map((g) => ({
+        ...g,
+        ...guestTotals(data.lines, data.payments, g.id, g.discountPercent),
+      })),
   );
 }
 
@@ -342,6 +418,10 @@ export function describeAudit(entry: Pick<AuditEntry, "action" | "record" | "gue
   const r = entry.record;
   const num = (key: string) => (typeof r[key] === "number" ? (r[key] as number) : 0);
   const guest = entry.guestName ?? "Silinmiş misafir";
+  if (entry.action === "line.complimentary")
+    return `${guest}: ${String(r.name ?? "kalem")} ${r.complimentary ? "ikram yapıldı" : "ikramdan çıkarıldı"}`;
+  if (entry.action === "guest.discount")
+    return `${guest}: indirim %${num("discountPercent")}`;
   if (entry.action === "line.delete")
     return `${guest}: ${String(r.name ?? "kalem")} ${num("qty") > 1 ? `×${num("qty")} ` : ""}· ${formatMoney(num("price") * (num("qty") || 1))}`;
   if (entry.action === "payment.delete")
@@ -360,7 +440,11 @@ export function openSummary(
 ) {
   const open = data.guests.filter((g) => g.status === "open");
   let due = 0;
-  for (const g of open) due += Math.max(0, guestTotals(data.lines, data.payments, g.id).due);
+  for (const g of open)
+    due += Math.max(
+      0,
+      guestTotals(data.lines, data.payments, g.id, g.discountPercent).due,
+    );
   return { open: open.length, due };
 }
 

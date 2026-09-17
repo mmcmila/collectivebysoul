@@ -668,6 +668,83 @@
 .tab-account-row {
   grid-template-columns: 1fr 2fr auto;
 }
+.tab-row-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.tab-flags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: -6px 0 12px;
+}
+.tab-flag {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.tab-flag.iban {
+  background: #e3ecf5;
+  color: #2f4f73;
+}
+.tab-flag.discount {
+  background: #f6edda;
+  color: #97743b;
+}
+.tab-flag.comp {
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 11px;
+  background: #e8efdd;
+  color: #4d6436;
+  vertical-align: middle;
+}
+.tab-lines li.comp .tab-line-amount {
+  color: #4d6436;
+}
+.tab-lines li.comp s {
+  color: #9a9f90;
+  margin-right: 6px;
+  font-weight: 400;
+}
+.tab-gift {
+  color: #4d6436;
+}
+.tab-gift[aria-pressed="true"] {
+  background: #e8efdd;
+  border-color: #b9c2a6;
+}
+.tab-totals small {
+  display: block;
+  font-size: 11px;
+  color: #7b836c;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.tab-pending-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #e3ecf5;
+  color: #2f4f73;
+  font-size: 13px;
+}
+.tab-pending-note button {
+  border: 0;
+  background: none;
+  color: #2f4f73;
+  text-decoration: underline;
+  padding: 4px 0;
+  min-height: 32px;
+}
+.tab-bar-head strong small {
+  font-size: 12px;
+  font-weight: 400;
+  color: #4d6436;
+}
 @media (max-width: 760px) {
   .tab-account-row {
     grid-template-columns: 1fr 1fr;

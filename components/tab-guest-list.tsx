@@ -132,10 +132,15 @@ export function TabGuestList({
                 <span className="tab-guest-sub">
                   {g.category && `${guestCategories[g.category]} · `}
                   {g.count} kalem · {formatMoney(g.total)} toplam
+                  {g.discountPercent > 0 && ` · %${g.discountPercent} indirim`}
                 </span>
               </span>
               <span className={`ad-badge ${g.status === "open" ? "pending" : "done"}`}>
-                {g.status === "open" ? "Açık" : "Kapalı"}
+                {g.pendingMethod === "iban"
+                  ? "IBAN bekleniyor"
+                  : g.status === "open"
+                    ? "Açık"
+                    : "Kapalı"}
               </span>
               <span className={`tab-due ${g.due > 0 ? "owe" : "zero"}`}>
                 {formatMoney(g.due)}
