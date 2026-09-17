@@ -114,8 +114,32 @@ ALTER TABLE guest_event.tab_guests ADD COLUMN IF NOT EXISTS pending_method text 
 ALTER TABLE guest_event.tab_guests ADD COLUMN IF NOT EXISTS pending_account_id uuid REFERENCES guest_event.bank_accounts(id) ON DELETE SET NULL;
 ALTER TABLE guest_event.tab_lines ADD COLUMN IF NOT EXISTS complimentary boolean NOT NULL DEFAULT false;
 
+-- Discount rules (per participant type or per person) and per-line discount
+-- snapshots: removing a rule or a personal discount only affects new lines.
+CREATE TABLE IF NOT EXISTS guest_event.discount_rules (
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ kind text NOT NULL CHECK (kind IN ('category','guest')),
+ category text CHECK (category IN ('paid','team','guest')),
+ guest_id uuid REFERENCES guest_event.tab_guests(id) ON DELETE CASCADE,
+ percent integer NOT NULL CHECK (percent BETWEEN 0 AND 100),
+ label text NOT NULL DEFAULT '',
+ created_at timestamptz NOT NULL DEFAULT now(),
+ CHECK ((kind='category' AND category IS NOT NULL) OR (kind='guest' AND guest_id IS NOT NULL))
+);
+ALTER TABLE guest_event.tab_lines ADD COLUMN IF NOT EXISTS discount_percent integer NOT NULL DEFAULT 0 CHECK (discount_percent BETWEEN 0 AND 100);
+-- tab_guests.discount_percent becomes an optional override: NULL = follow the rules.
+ALTER TABLE guest_event.tab_guests ALTER COLUMN discount_percent DROP NOT NULL;
+ALTER TABLE guest_event.tab_guests ALTER COLUMN discount_percent DROP DEFAULT;
+UPDATE guest_event.tab_lines l SET discount_percent=COALESCE(g.discount_percent,0)
+ FROM guest_event.tab_guests g WHERE g.id=l.guest_id
+ AND NOT EXISTS (SELECT 1 FROM guest_event.settings WHERE key='line_discount_backfill');
+UPDATE guest_event.tab_guests SET discount_percent=NULL WHERE discount_percent=0
+ AND NOT EXISTS (SELECT 1 FROM guest_event.settings WHERE key='line_discount_backfill');
+INSERT INTO guest_event.settings(key,value) VALUES ('line_discount_backfill','1') ON CONFLICT DO NOTHING;
+
 REVOKE ALL ON guest_event.tab_guests, guest_event.menu_items, guest_event.tab_lines,
- guest_event.tab_payments, guest_event.tab_audit, guest_event.settings, guest_event.bank_accounts
+ guest_event.tab_payments, guest_event.tab_audit, guest_event.settings, guest_event.bank_accounts,
+ guest_event.discount_rules
  FROM PUBLIC, anon, authenticated;
 
 COMMIT;

@@ -26,23 +26,36 @@ export type Totals = {
   count: number;
 };
 
-/** Totals are derived from lines, payments and the guest's discount; nothing is stored. */
+/** Discount of one line, from the percentage snapshotted when it was added. */
+export const lineDiscount = (
+  line: Pick<TabLine, "price" | "qty" | "complimentary" | "discountPercent">,
+) =>
+  line.complimentary
+    ? 0
+    : Math.round((line.price * line.qty * line.discountPercent) / 100);
+
+/** Totals are derived from lines and payments; nothing is stored. */
 export function guestTotals(
-  lines: Pick<TabLine, "guestId" | "price" | "qty" | "complimentary">[],
+  lines: Pick<
+    TabLine,
+    "guestId" | "price" | "qty" | "complimentary" | "discountPercent"
+  >[],
   payments: Pick<TabPayment, "guestId" | "amount">[],
   guestId: string,
-  discountPercent = 0,
 ): Totals {
   let subtotal = 0;
   let complimentary = 0;
+  let discount = 0;
   let count = 0;
   for (const line of lines)
     if (line.guestId === guestId) {
       if (line.complimentary) complimentary += line.price * line.qty;
-      else subtotal += line.price * line.qty;
+      else {
+        subtotal += line.price * line.qty;
+        discount += lineDiscount(line);
+      }
       count += 1;
     }
-  const discount = Math.round((subtotal * discountPercent) / 100);
   const total = subtotal - discount;
   let paid = 0;
   for (const payment of payments)
@@ -226,8 +239,7 @@ export function summarize(
     items.set(line.name, item);
   }
   let discount = 0;
-  for (const g of data.guests)
-    discount += guestTotals(data.lines, [], g.id, g.discountPercent).discount;
+  for (const line of data.lines) discount += lineDiscount(line);
   const total = gross - complimentary - discount;
   let paid = 0;
   const accounts = new Map<
@@ -263,7 +275,7 @@ export function summarize(
     .map((g) => ({
       id: g.id,
       name: g.name,
-      due: guestTotals(data.lines, data.payments, g.id, g.discountPercent).due,
+      due: guestTotals(data.lines, data.payments, g.id).due,
     }))
     .filter((g) => g.due > 0)
     .sort((a, b) => b.due - a.due || a.name.localeCompare(b.name, "tr"));
@@ -344,14 +356,14 @@ export function buildCsv(
       ],
     });
   for (const g of data.guests) {
-    const t = guestTotals(data.lines, [], g.id, g.discountPercent);
+    const t = guestTotals(data.lines, [], g.id);
     if (t.discount > 0)
       entries.push({
         at: g.createdAt,
         row: [
           "indirim",
           g.name,
-          `%${g.discountPercent} indirim`,
+          "indirim",
           "",
           "",
           csvMoney(-t.discount),
@@ -397,10 +409,7 @@ export function guestRows(
           (filter === "all" || g.status === filter) &&
           matchesSearch(g.name, query),
       )
-      .map((g) => ({
-        ...g,
-        ...guestTotals(data.lines, data.payments, g.id, g.discountPercent),
-      })),
+      .map((g) => ({ ...g, ...guestTotals(data.lines, data.payments, g.id) })),
   );
 }
 
@@ -441,10 +450,7 @@ export function openSummary(
   const open = data.guests.filter((g) => g.status === "open");
   let due = 0;
   for (const g of open)
-    due += Math.max(
-      0,
-      guestTotals(data.lines, data.payments, g.id, g.discountPercent).due,
-    );
+    due += Math.max(0, guestTotals(data.lines, data.payments, g.id).due);
   return { open: open.length, due };
 }
 

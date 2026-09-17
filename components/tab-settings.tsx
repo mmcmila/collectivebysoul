@@ -5,8 +5,10 @@ import {
   deleteBankAccount,
   deleteMenuItem,
   saveBankAccounts,
+  saveDiscountRules,
   saveMenu,
 } from "@/app/yonetim/adisyon/actions";
+import { guestCategories } from "@/lib/guest/admin-types";
 import { StaffCodes } from "@/components/staff-codes";
 import type { Notify } from "@/components/tab-module";
 import { useAction } from "@/hooks/use-action";
@@ -14,6 +16,7 @@ import { formatLiraInput, parseAmount } from "@/lib/tab/calc";
 import {
   stations,
   type BankAccountDraft,
+  type DiscountRuleDraft,
   type MenuDraftItem,
   type Station,
   type TabData,
@@ -61,6 +64,50 @@ export function TabSettings({
       accountRows.map((r) => (r.key === key ? { ...r, ...patch } : r)),
     );
   const ibanAction = useAction();
+  type RuleRow = DiscountRuleDraft & { key: string; percentText: string };
+  const toRuleDraft = (rules: TabData["discountRules"]): RuleRow[] =>
+    rules.map((r) => ({
+      key: r.id,
+      id: r.id,
+      kind: r.kind,
+      category: r.category,
+      guestId: r.guestId,
+      percent: r.percent,
+      percentText: String(r.percent),
+      label: r.label,
+    }));
+  const [ruleDraft, setRuleDraft] = useState<RuleRow[] | null>(null);
+  const ruleRows = ruleDraft ?? toRuleDraft(data.discountRules);
+  const editRule = (key: string, patch: Partial<RuleRow>) =>
+    setRuleDraft(ruleRows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  const ruleAction = useAction();
+  const submitRules = () => {
+    const items: DiscountRuleDraft[] = [];
+    for (const r of ruleRows) {
+      const percent = Number(r.percentText.replace(",", "."));
+      if (!Number.isInteger(percent) || percent < 0 || percent > 100)
+        return ruleAction.setError("Her kural için 0–100 arasında bir yüzde yaz.");
+      if (r.kind === "guest" && !r.guestId)
+        return ruleAction.setError("Kişiye özel kural için misafir seç.");
+      items.push({
+        id: r.id,
+        kind: r.kind,
+        category: r.kind === "category" ? r.category : null,
+        guestId: r.kind === "guest" ? r.guestId : null,
+        percent,
+        label: r.label,
+      });
+    }
+    void ruleAction.run(
+      "Bağlantı kesildi. Kurallar kaydedilmedi.",
+      () => saveDiscountRules(items),
+      async () => {
+        setRuleDraft(null);
+        notify("İndirim kuralları kaydedildi");
+        await refresh();
+      },
+    );
+  };
   const [bulk, setBulk] = useState("");
   const bulkAction = useAction();
 
@@ -330,6 +377,112 @@ export function TabSettings({
         {ibanAction.error && (
           <p className="ad-error" role="alert">
             {ibanAction.error}
+          </p>
+        )}
+      </section>
+
+      <section className="tab-card" aria-labelledby="tab-discount-rules-title">
+        <h2 id="tab-discount-rules-title">İndirimler</h2>
+        <p className="ad-note">
+          Katılımcı türüne (Ekipten / Misafir / Biletli) veya kişiye özel
+          yüzde. Yeni siparişlere uygulanır; kural silinse de daha önce
+          eklenen kalemler indirimli kalır. Kişi profilinden de değiştirilebilir.
+        </p>
+        <div className="tab-menu-edit">
+          {ruleRows.map((row) => (
+            <div key={row.key} className="tab-menu-row tab-rule-row">
+              <label>
+                <span>Kim için</span>
+                <select
+                  value={row.kind === "guest" ? "guest:" + (row.guestId ?? "") : "category:" + (row.category ?? "team")}
+                  onChange={(e) => {
+                    const [kind, value] = e.target.value.split(":");
+                    editRule(
+                      row.key,
+                      kind === "guest"
+                        ? { kind: "guest", guestId: value || null, category: null }
+                        : { kind: "category", category: value as "paid" | "team" | "guest", guestId: null },
+                    );
+                  }}
+                >
+                  {(Object.keys(guestCategories) as ("paid" | "team" | "guest")[]).map((c) => (
+                    <option key={c} value={"category:" + c}>
+                      Tüm {guestCategories[c].toLocaleLowerCase("tr")} katılımcılar
+                    </option>
+                  ))}
+                  <option value="guest:">Kişiye özel…</option>
+                  {data.guests.map((g) => (
+                    <option key={g.id} value={"guest:" + g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Yüzde</span>
+                <input
+                  inputMode="numeric"
+                  value={row.percentText}
+                  placeholder="35"
+                  aria-label="İndirim yüzdesi"
+                  onChange={(e) => editRule(row.key, { percentText: e.target.value })}
+                />
+              </label>
+              <label>
+                <span>Not</span>
+                <input
+                  value={row.label}
+                  maxLength={80}
+                  placeholder="Örn. Ekip indirimi"
+                  aria-label="Kural notu"
+                  onChange={(e) => editRule(row.key, { label: e.target.value })}
+                />
+              </label>
+              <button
+                type="button"
+                className="tab-x"
+                aria-label="Kuralı sil"
+                onClick={() => setRuleDraft(ruleRows.filter((r) => r.key !== row.key))}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          {!ruleRows.length && <p className="ad-note">Henüz kural yok.</p>}
+        </div>
+        <div className="tab-row">
+          <button
+            type="button"
+            className="tab-secondary"
+            onClick={() =>
+              setRuleDraft([
+                ...ruleRows,
+                {
+                  key: "new-" + crypto.randomUUID(),
+                  id: null,
+                  kind: "category",
+                  category: "team",
+                  guestId: null,
+                  percent: 0,
+                  percentText: "",
+                  label: "",
+                },
+              ])
+            }
+          >
+            + Kural
+          </button>
+          <button
+            className="ad-primary"
+            disabled={ruleAction.busy || ruleDraft === null}
+            onClick={submitRules}
+          >
+            {ruleAction.busy ? "Kaydediliyor…" : "Kuralları kaydet"}
+          </button>
+        </div>
+        {ruleAction.error && (
+          <p className="ad-error" role="alert">
+            {ruleAction.error}
           </p>
         )}
       </section>

@@ -26,7 +26,6 @@ import {
 } from "@/lib/tab/calc";
 import { submitOnEnter } from "@/lib/tab/forms";
 import {
-  discountOptions,
   paymentMethods,
   stations,
   type MenuItem,
@@ -73,12 +72,8 @@ export function TabGuestDetail({
     activeAccounts.find((a) => a.id === chosenAccount) ?? activeAccounts[0] ?? null;
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
-  const totals = guestTotals(
-    data.lines,
-    data.payments,
-    guest.id,
-    guest.discountPercent,
-  );
+  const totals = guestTotals(data.lines, data.payments, guest.id);
+  const [discountInput, setDiscountInput] = useState("");
   const lines = data.lines.filter((l) => l.guestId === guest.id);
   const payments = data.payments.filter((p) => p.guestId === guest.id);
   const menu = visibleMenu(data.menu, station, allMenu);
@@ -101,6 +96,7 @@ export function TabGuestDetail({
       qty: 1,
       station: item.station,
       complimentary: false,
+      discountPercent: guest.discountPercent,
       createdBy: user.id,
       createdByName: user.name,
       createdAt: new Date().toISOString(),
@@ -246,10 +242,14 @@ export function TabGuestDetail({
     );
   const unmarkPending = () =>
     simple(() => clearPending(guest.id), "IBAN bekleme kaldırıldı");
-  const setDiscount = (percent: number) =>
+  const setDiscount = (percent: number | null) =>
     simple(
       () => setGuestDiscount(guest.id, percent),
-      percent ? `%${percent} indirim tanımlandı` : "İndirim kaldırıldı",
+      percent === null
+        ? "Ayarlardaki kurala dönüldü"
+        : percent
+          ? `%${percent} indirim · yeni siparişlere`
+          : "İndirim kaldırıldı · yeni siparişler indirimsiz",
     );
   const toggleComplimentary = (line: TabLine) =>
     simple(
@@ -381,7 +381,10 @@ export function TabGuestDetail({
             </span>
           )}
           {guest.discountPercent > 0 && (
-            <span className="tab-flag discount">%{guest.discountPercent} indirim</span>
+            <span className="tab-flag discount">
+              %{guest.discountPercent} indirim
+              {guest.discountSource === "rule" && " · kural"}
+            </span>
           )}
         </p>
       )}
@@ -673,24 +676,60 @@ export function TabGuestDetail({
 
       {isAdmin && (
         <section className="tab-card" aria-labelledby="tab-discount-title">
-          <h2 id="tab-discount-title">İndirim tanımla</h2>
-          <p className="ad-note">
-            Ekip veya davetliler için. Toplam, ikram dışı kalemlerin üzerinden
-            yüzde olarak düşer; özet ve CSV’de ayrı görünür.
+          <h2 id="tab-discount-title">İndirim</h2>
+          <p className="tab-discount-state">
+            {guest.discountPercent > 0
+              ? `Şu an %${guest.discountPercent} · ${guest.discountSource === "override" ? "kişiye özel" : "Ayarlar’daki kural"}`
+              : guest.discountSource === "override"
+                ? "İndirim kaldırıldı (kural olsa da uygulanmaz)"
+                : "İndirim yok"}
           </p>
-          <div className="tab-chips" role="group" aria-label="İndirim yüzdesi">
-            {discountOptions.map((pct) => (
-              <button
-                key={pct}
-                type="button"
-                className="tab-chip"
-                aria-pressed={guest.discountPercent === pct}
-                disabled={busy}
-                onClick={() => void setDiscount(pct)}
-              >
-                {pct === 0 ? "Yok" : `%${pct}`}
-              </button>
-            ))}
+          <p className="ad-note">
+            Yeni siparişlere uygulanır; hesaptaki önceki kalemler eklendikleri
+            andaki indirimle kalır. Ekip / misafir kuralları Ayarlar’da.
+          </p>
+          <form
+            className="tab-row"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const value = Number(discountInput.replace(",", "."));
+              if (!Number.isInteger(value) || value < 0 || value > 100)
+                return notify("0–100 arasında bir yüzde yaz.", "error");
+              setDiscountInput("");
+              void setDiscount(value);
+            }}
+          >
+            <label className="tab-visually-hidden" htmlFor="tab-discount-input">
+              İndirim yüzdesi
+            </label>
+            <input
+              id="tab-discount-input"
+              inputMode="numeric"
+              placeholder="Yüzde, örn. 35"
+              value={discountInput}
+              onChange={(e) => setDiscountInput(e.target.value)}
+            />
+            <button className="ad-primary" disabled={busy}>
+              Kişiye özel uygula
+            </button>
+          </form>
+          <div className="tab-row">
+            <button
+              type="button"
+              className="tab-secondary"
+              disabled={busy || (guest.discountOverride === 0)}
+              onClick={() => void setDiscount(0)}
+            >
+              İndirimi kaldır
+            </button>
+            <button
+              type="button"
+              className="tab-secondary"
+              disabled={busy || guest.discountOverride === null}
+              onClick={() => void setDiscount(null)}
+            >
+              Kurala dön
+            </button>
           </div>
         </section>
       )}

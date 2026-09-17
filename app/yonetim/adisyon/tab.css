@@ -756,3 +756,19 @@
     min-width: 0;
   }
 }
+
+.tab-rule-row {
+  grid-template-columns: 2fr 80px 1.5fr auto;
+}
+.tab-discount-state {
+  margin: 0 0 6px;
+  font-weight: 500;
+}
+@media (max-width: 760px) {
+  .tab-rule-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .tab-rule-row label:first-child {
+    grid-column: 1 / -1;
+  }
+}

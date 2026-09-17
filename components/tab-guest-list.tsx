@@ -133,6 +133,7 @@ export function TabGuestList({
                   {g.category && `${guestCategories[g.category]} · `}
                   {g.count} kalem · {formatMoney(g.total)} toplam
                   {g.discountPercent > 0 && ` · %${g.discountPercent} indirim`}
+                  {g.discountPercent === 0 && g.discount > 0 && " · indirimli kalemler var"}
                 </span>
               </span>
               <span className={`ad-badge ${g.status === "open" ? "pending" : "done"}`}>
