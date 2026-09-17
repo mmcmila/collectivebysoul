@@ -38,6 +38,10 @@ try{
  const codeLogin=await fetch(base+'/yonetim',{method:'POST',headers:{'Next-Action':ids.loginAdmin,'Content-Type':'text/plain;charset=UTF-8',Origin:base},body:JSON.stringify([code.toLowerCase(),false])});
  assert.ok(codeLogin.headers.getSetCookie().some(c=>c.startsWith('soul_admin_session=')),'lower-case code with dash signs in');
  const renewed=await action('regenerateStaffCode',[staffId],admin.cookie);const code2=renewed.body.match(/"code":"([A-Z2-9]{3}-[A-Z2-9]{3})"/)?.[1];assert.ok(code2&&code2!==code,'renewal changes the code');
+ assert.ok((await action('renameStaffAccount',[staffId,'TEST kod düzeltildi '+tag],admin.cookie)).body.includes('"ok":true'),'staff can be renamed');
+ assert.ok((await action('renameStaffAccount',[staffId,'x'],bar.cookie)).body.includes('yönetici yetkisi'),'renaming is admin only');
+ const staffLog=await action('getStaffAudit',[],admin.cookie);for(const a of ['staff.create','staff.code','staff.rename'])assert.ok(staffLog.body.includes(a),a+' is logged');
+ assert.ok(staffLog.body.includes('TEST kod düzeltildi '+tag),'rename history shows the new name');
  // A participant issued in the console opens a tab automatically.
  const issued=await action('issueGuest',['TEST bilet '+tag,true,randomUUID(),'team'],admin.cookie);const ticketId=uuid(issued.body);assert.ok(ticketId,'ticket issued');created.tickets.push(ticketId);
  const [autoTab]=await sql`SELECT id,name FROM guest_event.tab_guests WHERE ticket_id=${ticketId}`;assert.equal(autoTab?.name,'TEST bilet '+tag,'issued participant has a tab');created.guests.push(autoTab.id);

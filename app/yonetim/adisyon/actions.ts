@@ -19,6 +19,7 @@ import {
   isPaymentMethod,
   isStaffRole,
   isStation,
+  type AuditEntry,
   type BankAccountDraft,
   type DiscountRuleDraft,
   type MenuDraftItem,
@@ -637,10 +638,18 @@ export async function createStaffAccount(name: string, role: string) {
   try {
     for (let attempt = 0; attempt < 10; attempt++) {
       const code = staffCode();
-      const rows =
-        await guestDb()`INSERT INTO guest_event.admins(name,code_hash,role,login_code) SELECT ${clean},${hash(code)},${staffRole},${code} WHERE NOT EXISTS (SELECT 1 FROM guest_event.admins WHERE login_code=${code}) ON CONFLICT (name) DO NOTHING RETURNING id`;
-      if (rows.length)
-        return ok({ id: String(rows[0].id), name: clean, code: displayCode(code) });
+      const created = await guestDb().begin(async (tx) => {
+        const rows =
+          await tx`INSERT INTO guest_event.admins(name,code_hash,role,login_code) SELECT ${clean},${hash(code)},${staffRole},${code} WHERE NOT EXISTS (SELECT 1 FROM guest_event.admins WHERE login_code=${code}) ON CONFLICT (name) DO NOTHING RETURNING id`;
+        if (!rows.length) return null;
+        await audit(tx, user, "staff.create", null, {
+          staffId: rows[0].id,
+          name: clean,
+          role: staffRole,
+        });
+        return String(rows[0].id);
+      });
+      if (created) return ok({ id: created, name: clean, code: displayCode(code) });
       const [taken] =
         await guestDb()`SELECT 1 FROM guest_event.admins WHERE name=${clean}`;
       if (taken)
@@ -662,9 +671,13 @@ export async function regenerateStaffCode(staffId: string) {
       const code = staffCode();
       const changed = await guestDb().begin(async (tx) => {
         const rows =
-          await tx`UPDATE guest_event.admins SET login_code=${code},code_hash=${hash(code)} WHERE id=${staffId} AND role<>'admin' AND NOT EXISTS (SELECT 1 FROM guest_event.admins WHERE login_code=${code}) RETURNING id`;
+          await tx`UPDATE guest_event.admins SET login_code=${code},code_hash=${hash(code)} WHERE id=${staffId} AND role<>'admin' AND NOT EXISTS (SELECT 1 FROM guest_event.admins WHERE login_code=${code}) RETURNING id,name`;
         if (!rows.length) return false;
         await tx`DELETE FROM guest_event.admin_sessions WHERE admin_id=${staffId}`;
+        await audit(tx, user, "staff.code", null, {
+          staffId,
+          name: rows[0].name,
+        });
         return true;
       });
       if (changed) return ok({ code: displayCode(code) });
@@ -687,13 +700,67 @@ export async function setStaffActive(staffId: string, active: boolean) {
   try {
     await guestDb().begin(async (tx) => {
       const rows =
-        await tx`UPDATE guest_event.admins SET active=${active} WHERE id=${staffId} AND role<>'admin' RETURNING id`;
+        await tx`UPDATE guest_event.admins SET active=${active} WHERE id=${staffId} AND role<>'admin' RETURNING id,name`;
       if (!rows.length) throw new UserError("Bu hesap değiştirilemez.");
       if (!active)
         await tx`DELETE FROM guest_event.admin_sessions WHERE admin_id=${staffId}`;
+      await audit(tx, user, "staff.active", null, {
+        staffId,
+        name: rows[0].name,
+        active,
+      });
     });
     return ok({});
   } catch (e) {
     return fail(e, "Hesap güncellenemedi.");
   }
+}
+
+/** Fixes a staff member's name (typo, nickname). Admin only. */
+export async function renameStaffAccount(staffId: string, name: string) {
+  const user = await currentOrganiser();
+  if (!user) return fail(null, ADMIN_ERROR);
+  const clean = cleanName(name);
+  if (!isUuid(staffId)) return fail(null, "Geçersiz hesap.");
+  if (clean.length < 2 || clean.length > 60)
+    return fail(null, "Personel adı 2–60 karakter olmalı.");
+  try {
+    await guestDb().begin(async (tx) => {
+      const [current] =
+        await tx`SELECT name FROM guest_event.admins WHERE id=${staffId} AND role<>'admin' FOR UPDATE`;
+      if (!current) throw new UserError("Bu hesap değiştirilemez.");
+      const [taken] =
+        await tx`SELECT 1 FROM guest_event.admins WHERE name=${clean} AND id<>${staffId}`;
+      if (taken) throw new UserError("Bu isimde başka bir hesap var.");
+      await tx`UPDATE guest_event.admins SET name=${clean} WHERE id=${staffId}`;
+      await audit(tx, user, "staff.rename", null, {
+        staffId,
+        from: current.name,
+        to: clean,
+      });
+    });
+    return ok({});
+  } catch (e) {
+    return fail(e, "İsim değiştirilemedi.");
+  }
+}
+
+/** Staff-related history: who created, renamed, renewed or closed which login. Admin only. */
+export async function getStaffAudit() {
+  const user = await currentOrganiser();
+  if (!user) return fail(null, ADMIN_ERROR);
+  const rows =
+    await guestDb()`SELECT id,action,record,actor_name,created_at FROM guest_event.tab_audit WHERE action LIKE 'staff.%' ORDER BY created_at DESC LIMIT 100`;
+  return ok({
+    entries: rows.map(
+      (r): AuditEntry => ({
+        id: r.id,
+        action: r.action,
+        guestName: null,
+        record: r.record,
+        actorName: r.actor_name,
+        createdAt: r.created_at.toISOString(),
+      }),
+    ),
+  });
 }
