@@ -27,6 +27,8 @@ try {
       const [ticket] =
         await sql`INSERT INTO guest_event.tickets (name,code_hash,is_demo) VALUES (${args[0]},${createHash("sha256").update(code).digest("hex")},${args[1] === "--demo"}) ON CONFLICT(code_hash) DO NOTHING RETURNING id`;
       if (ticket) {
+        if (args[1] === "--paid")
+          await sql`INSERT INTO guest_event.tab_guests(name,ticket_id) VALUES(${args[0]},${ticket.id}) ON CONFLICT (ticket_id) DO NOTHING`;
         console.log(
           JSON.stringify(
             {

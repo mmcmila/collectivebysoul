@@ -17,7 +17,7 @@ export async function loadTabData(user: StaffUser): Promise<TabData> {
   // pooler stalls when this app opens several connections at once, and
   // each query is small (~150 ms), so sequential is both safe and fast.
   const guests =
-    await sql`SELECT id,name,status,created_at FROM guest_event.tab_guests ORDER BY name`;
+    await sql`SELECT g.id,g.name,g.status,g.created_at,t.category FROM guest_event.tab_guests g LEFT JOIN guest_event.tickets t ON t.id=g.ticket_id ORDER BY g.name`;
   const menu =
     await sql`SELECT id,name,price,station,active,sort_order FROM guest_event.menu_items ORDER BY sort_order,name`;
   const lines =
@@ -36,6 +36,7 @@ export async function loadTabData(user: StaffUser): Promise<TabData> {
         id: g.id,
         name: g.name,
         status: g.status,
+        category: g.category ?? null,
         createdAt: g.created_at.toISOString(),
       }),
     ),

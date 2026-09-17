@@ -5,6 +5,7 @@ import type { Notify } from "@/components/tab-module";
 import { useAction } from "@/hooks/use-action";
 import { formatMoney, guestRows, openSummary } from "@/lib/tab/calc";
 import { submitOnEnter } from "@/lib/tab/forms";
+import { guestCategories } from "@/lib/guest/admin-types";
 import type { TabData } from "@/lib/tab/types";
 
 type Filter = "open" | "all" | "closed";
@@ -129,6 +130,7 @@ export function TabGuestList({
               <span className="tab-guest-main">
                 <span className="tab-guest-name">{g.name}</span>
                 <span className="tab-guest-sub">
+                  {g.category && `${guestCategories[g.category]} · `}
                   {g.count} kalem · {formatMoney(g.total)} toplam
                 </span>
               </span>

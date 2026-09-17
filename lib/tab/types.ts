@@ -25,6 +25,8 @@ export type TabGuest = {
   id: string;
   name: string;
   status: TabStatus;
+  /** Participant type when the tab was opened from the management console. */
+  category: "paid" | "team" | "guest" | null;
   createdAt: string;
 };
 

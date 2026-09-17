@@ -158,8 +158,11 @@ export async function issueGuest(
       const raw = String(randomInt(10000, 100000));
       const rows =
         await sql`INSERT INTO guest_event.tickets(name,code_hash,issue_request_id,category) VALUES(${name.trim()},${hash(raw)},${requestId},${category}) ON CONFLICT DO NOTHING RETURNING id`;
-      if (rows.length)
+      if (rows.length) {
+        // Every participant gets an Adisyon tab right away.
+        await sql`INSERT INTO guest_event.tab_guests(name,ticket_id) VALUES(${name.trim()},${rows[0].id}) ON CONFLICT (ticket_id) DO NOTHING`;
         return { id: String(rows[0].id), name: name.trim(), code: raw };
+      }
       const existing =
         await sql`SELECT id FROM guest_event.tickets WHERE issue_request_id=${requestId}`;
       if (existing.length)
@@ -237,6 +240,8 @@ export async function updateParticipant(
   try {
     await withEventLock(async (sql) => {
       await sql`UPDATE guest_event.tickets SET category=${category},active=${active} WHERE id=${id}`;
+      if (active)
+        await sql`INSERT INTO guest_event.tab_guests(name,ticket_id) SELECT name,id FROM guest_event.tickets WHERE id=${id} AND NOT is_demo ON CONFLICT (ticket_id) DO NOTHING`;
       if (!active) {
         await sql`DELETE FROM guest_event.sessions WHERE ticket_id=${id}`;
         await sql`DELETE FROM guest_event.reservations WHERE ticket_id=${id}`;

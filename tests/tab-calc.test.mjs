@@ -34,8 +34,8 @@ const accounts = [
   { id: "acc-2", label: "Can", iban: "TR00 2", active: true, sortOrder: 2 },
 ];
 const guests = [
-  { id: "a", name: "Şule Çınar", status: "open", createdAt: "2026-09-19T17:00:00.000Z" },
-  { id: "b", name: "Ali Işık", status: "closed", createdAt: "2026-09-19T17:00:00.000Z" },
+  { id: "a", name: "Şule Çınar", status: "open", category: "paid", createdAt: "2026-09-19T17:00:00.000Z" },
+  { id: "b", name: "Ali Işık", status: "closed", category: null, createdAt: "2026-09-19T17:00:00.000Z" },
 ];
 
 test("total, paid and due are derived from lines and payments", () => {
