@@ -6,6 +6,7 @@ import {
   FortuneScheduleControls,
 } from "@/components/admin-management";
 import { AdminSettings } from "@/components/admin-settings";
+import { StaffCodes } from "@/components/staff-codes";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -173,6 +174,9 @@ export function AdminPanel({ initial }: { initial: AdminData }) {
           >
             Hesap ayarları
           </button>
+          <Link href="/yonetim/hesap" className="ad-module-link">
+            Açık Hesap →
+          </Link>
           <Link href="/misafir">Misafir ekranı ↗</Link>
           <form action={logoutAdmin}>
             <button>Çıkış yap</button>
@@ -322,6 +326,15 @@ export function AdminPanel({ initial }: { initial: AdminData }) {
             )}
           </section>
         )}
+        <section className="ad-capacity" aria-labelledby="staff-title">
+          <div className="ad-section-heading">
+            <h2 id="staff-title">Açık Hesap girişleri</h2>
+            <Link href="/yonetim/hesap" className="ad-module-link">
+              Açık Hesap’ı aç →
+            </Link>
+          </div>
+          <StaffCodes />
+        </section>
         <section className="ad-capacity">
           <div className="ad-section-heading">
             <h2>Atölyeler</h2>

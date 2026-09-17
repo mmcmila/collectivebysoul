@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { currentAdmin } from "@/lib/guest/admin-session";
 import { AdminPanel } from "@/components/admin-panel";
 import { AdminLogin } from "@/components/admin-login";
@@ -9,6 +10,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 export default async function AdminPage() {
-  if (!(await currentAdmin())) return <AdminLogin />;
+  const user = await currentAdmin();
+  if (!user) return <AdminLogin />;
+  if (user.role !== "admin") redirect("/yonetim/hesap");
   return <AdminPanel initial={await getAdminData()} />;
 }

@@ -19,7 +19,7 @@ export function AdminLogin() {
       <section>
         <span className="ad-kicker">ORGANİZASYON EKİBİ</span>
         <h1>Her şey bir arada.</h1>
-        <p>Katılımcılar, planlar ve atölye kontenjanları.</p>
+        <p>Katılımcılar, planlar, atölyeler ve Açık Hesap.</p>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -30,7 +30,7 @@ export function AdminLogin() {
             );
           }}
         >
-          <label htmlFor="admin-code">Şifre veya yönetim kodu</label>
+          <label htmlFor="admin-code">Şifre veya giriş kodu</label>
           <input
             id="admin-code"
             type="password"

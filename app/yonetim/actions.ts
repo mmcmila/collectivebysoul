@@ -6,13 +6,18 @@ import {
   hashAdminPassword,
   verifyAdminPassword,
 } from "@/lib/guest/admin-password";
-import { adminCookie, currentAdmin } from "@/lib/guest/admin-session";
+import {
+  adminCookie,
+  currentAdmin,
+  currentOrganiser,
+} from "@/lib/guest/admin-session";
 import {
   isGuestCategory,
   type AdminData,
   type GuestCategory,
 } from "@/lib/guest/admin-types";
 import { guestDb, UserError, withEventLock } from "@/lib/guest/db";
+import { normalizeLoginCode } from "@/lib/tab/types";
 import {
   conflictingWorkshop,
   FORTUNE_MAX_SLOTS,
@@ -45,9 +50,30 @@ export async function loginAdmin(code: string, remember = false) {
     if (!(await consumeLoginAttempt(key, 8)))
       return { error: "Çok fazla deneme. 15 dakika sonra yeniden dene." };
     const sql = guestDb();
-    const [admin] =
-      await sql`SELECT id,code_hash FROM guest_event.admins WHERE name='Organizatör' AND active`;
-    if (!admin || !(await verifyAdminPassword(code, admin.code_hash)))
+    // One password field for every staff account (organiser, bar, pizza):
+    // the code is checked against each active account. Staff codes are
+    // stored upper-case, so a lower-case entry is retried normalised.
+    const normalized = normalizeLoginCode(code);
+    let admin: { id: string; code_hash: string } | undefined;
+    // Bar/pizza staff sign in with a short readable code stored in login_code.
+    if (normalized.length >= 6) {
+      const [staff] =
+        await sql`SELECT id,code_hash FROM guest_event.admins WHERE active AND login_code=${normalized}`;
+      if (staff) admin = { id: staff.id, code_hash: staff.code_hash };
+    }
+    const accounts = admin
+      ? []
+      : await sql`SELECT id,code_hash FROM guest_event.admins WHERE active AND login_code IS NULL ORDER BY role,created_at`;
+    const candidates = [...new Set([code, code.trim().toUpperCase()])];
+    for (const account of accounts) {
+      for (const candidate of candidates)
+        if (await verifyAdminPassword(candidate, account.code_hash)) {
+          admin = { id: account.id, code_hash: account.code_hash };
+          break;
+        }
+      if (admin) break;
+    }
+    if (!admin)
       return {
         error:
           "Şifre veya yönetim kodu geçersiz. Biletli giriş kodları burada kullanılamaz.",
@@ -81,7 +107,8 @@ export async function logoutAdmin() {
 }
 
 export async function getAdminData(): Promise<AdminData> {
-  if (!(await currentAdmin())) redirect("/yonetim");
+  if (!(await currentOrganiser()))
+    redirect((await currentAdmin()) ? "/yonetim/hesap" : "/yonetim");
   const sql = guestDb();
   const [guests, workshops] = await Promise.all([
     sql`SELECT t.id,t.name,t.active,t.is_demo,t.category,p.updated_at,p.data FROM guest_event.tickets t LEFT JOIN guest_event.plans p ON p.ticket_id=t.id ORDER BY p.updated_at DESC NULLS LAST,t.created_at DESC`,
@@ -114,7 +141,7 @@ export async function issueGuest(
   requestId: string,
   category: GuestCategory = "paid",
 ) {
-  if (!(await currentAdmin()))
+  if (!(await currentOrganiser()))
     return { error: "Yönetim oturumun sona erdi. Yeniden giriş yap." };
   if (
     typeof name !== "string" ||
@@ -204,7 +231,7 @@ export async function updateParticipant(
   category: string,
   active: boolean,
 ) {
-  if (!(await currentAdmin())) return { error: "Yeniden giriş yap." };
+  if (!(await currentOrganiser())) return { error: "Yeniden giriş yap." };
   if (!validId(id) || !isGuestCategory(category) || typeof active !== "boolean")
     return { error: "Geçersiz kayıt." };
   try {
@@ -228,7 +255,7 @@ export async function manageFortune(
   ticketId: string | null,
   expectedTicketId: string | null,
 ) {
-  if (!(await currentAdmin())) return { error: "Yeniden giriş yap." };
+  if (!(await currentOrganiser())) return { error: "Yeniden giriş yap." };
   if (
     !validFortuneTime(slot) ||
     typeof enabled !== "boolean" ||
@@ -283,7 +310,7 @@ export async function changeFortuneSchedule(
   operation: "add" | "remove",
   slot: string,
 ) {
-  if (!(await currentAdmin())) return { error: "Yeniden giriş yap." };
+  if (!(await currentOrganiser())) return { error: "Yeniden giriş yap." };
   if (!["add", "remove"].includes(operation) || !validFortuneTime(slot))
     return {
       error: "14:00–23:45 arasında, 15 dakikalık aralıklarla bir saat seç.",
@@ -326,7 +353,7 @@ export async function removeWorkshopParticipant(
   workshopId: string,
   ticketId: string,
 ) {
-  if (!(await currentAdmin()))
+  if (!(await currentOrganiser()))
     return { error: "Yönetim oturumun sona erdi. Yeniden giriş yap." };
   if (!isWorkshopId(workshopId) || !validId(ticketId))
     return { error: "Geçersiz atölye veya katılımcı." };
