@@ -12,6 +12,6 @@ export const metadata: Metadata = {
 export default async function AdminPage() {
   const user = await currentAdmin();
   if (!user) return <AdminLogin />;
-  if (user.role !== "admin") redirect("/yonetim/hesap");
+  if (user.role !== "admin") redirect("/yonetim/adisyon");
   return <AdminPanel initial={await getAdminData()} />;
 }

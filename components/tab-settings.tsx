@@ -4,7 +4,7 @@ import {
   addTabGuestsBulk,
   saveBarIban,
   saveMenu,
-} from "@/app/yonetim/hesap/actions";
+} from "@/app/yonetim/adisyon/actions";
 import { StaffCodes } from "@/components/staff-codes";
 import type { Notify } from "@/components/tab-module";
 import { useAction } from "@/hooks/use-action";

@@ -1,4 +1,4 @@
-// Açık Hesap server actions: role permissions and tab rules against a real database.
+// Adisyon server actions: role permissions and tab rules against a real database.
 // Requires a production build (`pnpm build`), a running server (`pnpm start -p 3006`)
 // and POSTGRES_URL. Creates clearly labelled TEST records and removes them afterwards.
 import assert from 'node:assert/strict';
@@ -9,7 +9,7 @@ const base=process.env.TEST_BASE_URL||'http://localhost:3006';
 const manifest=JSON.parse(readFileSync((process.env.TEST_BUILD_DIR||'.')+'/.next/server/server-reference-manifest.json','utf8'));
 const ids=Object.fromEntries(Object.entries(manifest.node).map(([id,x])=>[x.exportedName,id]));
 async function action(name,args,cookie=''){
- const r=await fetch(base+'/yonetim/hesap',{method:'POST',headers:{'Next-Action':ids[name],'Content-Type':'text/plain;charset=UTF-8',Origin:base,...(cookie?{Cookie:cookie}:{})},body:JSON.stringify(args)});
+ const r=await fetch(base+'/yonetim/adisyon',{method:'POST',headers:{'Next-Action':ids[name],'Content-Type':'text/plain;charset=UTF-8',Origin:base,...(cookie?{Cookie:cookie}:{})},body:JSON.stringify(args)});
  return {status:r.status,body:await r.text()};
 }
 const uuid=body=>body.match(/"id":"([a-f0-9-]{36})"/)?.[1];

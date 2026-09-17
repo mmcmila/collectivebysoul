@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getTabData } from "@/app/yonetim/hesap/actions";
+import { getTabData } from "@/app/yonetim/adisyon/actions";
 import type { TabData } from "@/lib/tab/types";
 
 /**

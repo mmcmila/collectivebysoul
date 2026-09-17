@@ -108,7 +108,7 @@ export async function logoutAdmin() {
 
 export async function getAdminData(): Promise<AdminData> {
   if (!(await currentOrganiser()))
-    redirect((await currentAdmin()) ? "/yonetim/hesap" : "/yonetim");
+    redirect((await currentAdmin()) ? "/yonetim/adisyon" : "/yonetim");
   const sql = guestDb();
   const [guests, workshops] = await Promise.all([
     sql`SELECT t.id,t.name,t.active,t.is_demo,t.category,p.updated_at,p.data FROM guest_event.tickets t LEFT JOIN guest_event.plans p ON p.ticket_id=t.id ORDER BY p.updated_at DESC NULLS LAST,t.created_at DESC`,

@@ -116,7 +116,7 @@ export function TabSummary({ data }: { data: TabData }) {
           </ul>
         </section>
       )}
-      <a className="tab-secondary tab-csv" href="/yonetim/hesap/csv" download>
+      <a className="tab-secondary tab-csv" href="/yonetim/adisyon/csv" download>
         CSV indir
       </a>
       <p className="ad-note">
