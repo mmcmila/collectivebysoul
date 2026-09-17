@@ -813,3 +813,66 @@
 .tab-round-payment .tab-line-amount {
   color: #435431;
 }
+
+.tab-collapsible > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+  min-height: 48px;
+}
+.tab-collapsible > summary::-webkit-details-marker {
+  display: none;
+}
+.tab-collapsible > summary h2 {
+  margin: 0;
+}
+.tab-collapsible > summary > span {
+  font-size: 13px;
+  color: #657454;
+  text-align: right;
+}
+.tab-collapsible > summary::after {
+  content: "▾";
+  color: #657454;
+  margin-left: 4px;
+}
+.tab-collapsible[open] > summary::after {
+  content: "▴";
+}
+.tab-collapsible[open] > summary {
+  margin-bottom: 6px;
+}
+.tab-menu-group {
+  border-top: 1px solid #e8e9df;
+  padding: 8px 0 12px;
+}
+.tab-menu-group > summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 16px;
+}
+.tab-menu-group > summary::-webkit-details-marker {
+  display: none;
+}
+.tab-menu-group > summary span {
+  font-size: 13px;
+  color: #657454;
+}
+.tab-menu-group > summary::after {
+  content: "▾";
+  color: #657454;
+}
+.tab-menu-group[open] > summary::after {
+  content: "▴";
+}
+.tab-menu-group .tab-menu-edit {
+  margin: 4px 0 10px;
+}
