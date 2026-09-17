@@ -3,10 +3,14 @@ import { useState } from "react";
 import {
   addTabLine,
   addTabPayment,
+  clearPending,
   closeTabGuest,
   deleteTabGuest,
   deleteTabLine,
   deleteTabPayment,
+  markIbanPending,
+  setGuestDiscount,
+  setLineComplimentary,
 } from "@/app/yonetim/adisyon/actions";
 import type { Notify } from "@/components/tab-module";
 import {
@@ -22,6 +26,7 @@ import {
 } from "@/lib/tab/calc";
 import { submitOnEnter } from "@/lib/tab/forms";
 import {
+  discountOptions,
   paymentMethods,
   stations,
   type MenuItem,
@@ -68,7 +73,12 @@ export function TabGuestDetail({
     activeAccounts.find((a) => a.id === chosenAccount) ?? activeAccounts[0] ?? null;
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
-  const totals = guestTotals(data.lines, data.payments, guest.id);
+  const totals = guestTotals(
+    data.lines,
+    data.payments,
+    guest.id,
+    guest.discountPercent,
+  );
   const lines = data.lines.filter((l) => l.guestId === guest.id);
   const payments = data.payments.filter((p) => p.guestId === guest.id);
   const menu = visibleMenu(data.menu, station, allMenu);
@@ -90,6 +100,7 @@ export function TabGuestDetail({
       price: item.price,
       qty: 1,
       station: item.station,
+      complimentary: false,
       createdBy: user.id,
       createdByName: user.name,
       createdAt: new Date().toISOString(),
@@ -168,8 +179,16 @@ export function TabGuestDetail({
     setBusy(true);
     mutate((d) =>
       setStatus(
-        { ...d, payments: [...d.payments, temp] },
-        statusAfterPayment(totals.due - value),
+        {
+          ...d,
+          payments: [...d.payments, temp],
+          guests: d.guests.map((g) =>
+            g.id === guest.id
+              ? { ...g, pendingMethod: null, pendingAccountId: null, pendingAccountLabel: null }
+              : g,
+          ),
+        },
+        statusAfterPayment(totals.due - value, closing),
       ),
     );
     setAmount("");
@@ -178,6 +197,7 @@ export function TabGuestDetail({
       parsed,
       method,
       method === "iban" ? (account?.id ?? null) : null,
+      closing,
     ).catch(
       (): Result => ({ error: OFFLINE }),
     );
@@ -206,6 +226,36 @@ export function TabGuestDetail({
     );
     void refresh();
   };
+
+  // Simple (non-optimistic) actions: run, then refresh.
+  const simple = async (
+    run: () => Promise<{ error?: string }>,
+    done: string,
+  ) => {
+    setBusy(true);
+    const r = await run().catch((): Result => ({ error: OFFLINE }));
+    setBusy(false);
+    if (r.error) return notify(r.error, "error");
+    notify(done);
+    await refresh();
+  };
+  const markPending = () =>
+    simple(
+      () => markIbanPending(guest.id, account?.id ?? null),
+      "Hesap açık bırakıldı · IBAN bekleniyor",
+    );
+  const unmarkPending = () =>
+    simple(() => clearPending(guest.id), "IBAN bekleme kaldırıldı");
+  const setDiscount = (percent: number) =>
+    simple(
+      () => setGuestDiscount(guest.id, percent),
+      percent ? `%${percent} indirim tanımlandı` : "İndirim kaldırıldı",
+    );
+  const toggleComplimentary = (line: TabLine) =>
+    simple(
+      () => setLineComplimentary(line.id, !line.complimentary),
+      line.complimentary ? "İkram kaldırıldı" : `İkram: ${line.name}`,
+    );
 
   const removePayment = async (payment: TabPayment) => {
     if (
@@ -322,10 +372,31 @@ export function TabGuestDetail({
           {open ? "Açık" : "Kapalı"}
         </span>
       </div>
+      {(guest.pendingMethod || guest.discountPercent > 0) && (
+        <p className="tab-flags">
+          {guest.pendingMethod === "iban" && (
+            <span className="tab-flag iban">
+              IBAN bekleniyor
+              {guest.pendingAccountLabel && ` · ${guest.pendingAccountLabel}`}
+            </span>
+          )}
+          {guest.discountPercent > 0 && (
+            <span className="tab-flag discount">%{guest.discountPercent} indirim</span>
+          )}
+        </p>
+      )}
       <div className="tab-totals">
         <div>
           <span>Toplam</span>
           <strong>{formatMoney(totals.total)}</strong>
+          {(totals.discount > 0 || totals.complimentary > 0) && (
+            <small>
+              {totals.discount > 0 && `−${formatMoney(totals.discount)} indirim`}
+              {totals.discount > 0 && totals.complimentary > 0 && " · "}
+              {totals.complimentary > 0 &&
+                `${formatMoney(totals.complimentary)} ikram`}
+            </small>
+          )}
         </div>
         <div>
           <span>Ödenen</span>
@@ -386,11 +457,17 @@ export function TabGuestDetail({
         {lines.length ? (
           <ul className="tab-lines">
             {lines.map((line) => (
-              <li key={line.id} className={isTemp(line.id) ? "pending" : ""}>
+              <li
+                key={line.id}
+                className={`${isTemp(line.id) ? "pending" : ""} ${line.complimentary ? "comp" : ""}`}
+              >
                 <span className="tab-line-main">
                   <span className="tab-line-name">
                     {line.name}
                     {line.qty > 1 && ` ×${line.qty}`}
+                    {line.complimentary && (
+                      <span className="tab-flag comp">İkram</span>
+                    )}
                   </span>
                   <span className="tab-line-sub">
                     {stations[line.station]} · {formatTime(line.createdAt)}
@@ -398,17 +475,38 @@ export function TabGuestDetail({
                   </span>
                 </span>
                 <span className="tab-line-amount">
-                  {formatMoney(line.price * line.qty)}
+                  {line.complimentary ? (
+                    <>
+                      <s>{formatMoney(line.price * line.qty)}</s> 0 ₺
+                    </>
+                  ) : (
+                    formatMoney(line.price * line.qty)
+                  )}
                 </span>
                 {canDeleteRecord(user, line) && (
-                  <button
-                    className="tab-x"
-                    aria-label={`${line.name} sil`}
-                    disabled={isTemp(line.id)}
-                    onClick={() => void removeLine(line)}
-                  >
-                    ✕
-                  </button>
+                  <>
+                    <button
+                      className="tab-x tab-gift"
+                      aria-label={
+                        line.complimentary
+                          ? `${line.name} ikramını kaldır`
+                          : `${line.name} ikram et`
+                      }
+                      aria-pressed={line.complimentary}
+                      disabled={isTemp(line.id) || busy}
+                      onClick={() => void toggleComplimentary(line)}
+                    >
+                      🎁
+                    </button>
+                    <button
+                      className="tab-x"
+                      aria-label={`${line.name} sil`}
+                      disabled={isTemp(line.id)}
+                      onClick={() => void removeLine(line)}
+                    >
+                      ✕
+                    </button>
+                  </>
                 )}
               </li>
             ))}
@@ -500,7 +598,7 @@ export function TabGuestDetail({
           )}
           <div className="tab-row">
             <button className="ad-primary" disabled={busy}>
-              Ödeme al
+              Ödeme al · açık kalsın
             </button>
             <button
               type="button"
@@ -515,9 +613,30 @@ export function TabGuestDetail({
                 : "Kapalı"}
             </button>
           </div>
+          {method === "iban" && open && totals.due > 0 && (
+            <button
+              type="button"
+              className="tab-secondary"
+              disabled={busy || guest.pendingMethod === "iban"}
+              onClick={() => void markPending()}
+            >
+              {guest.pendingMethod === "iban"
+                ? "IBAN bekleniyor · açık"
+                : "IBAN ile ödeyecek · açık bırak"}
+            </button>
+          )}
+          {guest.pendingMethod === "iban" && (
+            <p className="tab-pending-note">
+              Misafir IBAN ile ödeyecek; para gelince “Ödeme al” ile kaydet.{" "}
+              <button type="button" onClick={() => void unmarkPending()} disabled={busy}>
+                Beklemeyi kaldır
+              </button>
+            </p>
+          )}
           <p className="ad-note">
-            “Ödeme al” yazılan tutarı, boşsa kalanın tamamını alır. “Hesabı
-            kapat” kalanı seçili yöntemle alır ve hesabı kapatır.
+            “Ödeme al” yazılan tutarı, boşsa kalanın tamamını alır; hesap açık
+            kalır, misafir sipariş vermeye devam edebilir. “Hesabı kapat” kalanı
+            seçili yöntemle alır ve hesabı kapatır.
           </p>
         </form>
         {method === "iban" && (
@@ -552,6 +671,29 @@ export function TabGuestDetail({
         )}
       </section>
 
+      {isAdmin && (
+        <section className="tab-card" aria-labelledby="tab-discount-title">
+          <h2 id="tab-discount-title">İndirim tanımla</h2>
+          <p className="ad-note">
+            Ekip veya davetliler için. Toplam, ikram dışı kalemlerin üzerinden
+            yüzde olarak düşer; özet ve CSV’de ayrı görünür.
+          </p>
+          <div className="tab-chips" role="group" aria-label="İndirim yüzdesi">
+            {discountOptions.map((pct) => (
+              <button
+                key={pct}
+                type="button"
+                className="tab-chip"
+                aria-pressed={guest.discountPercent === pct}
+                disabled={busy}
+                onClick={() => void setDiscount(pct)}
+              >
+                {pct === 0 ? "Yok" : `%${pct}`}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
       {isAdmin && (
         <button
           className="tab-danger"

@@ -13,6 +13,13 @@ export function TabSummary({ data }: { data: TabData }) {
         <div>
           <span>Satış</span>
           <strong>{formatMoney(s.total)}</strong>
+          {(s.discount > 0 || s.complimentary > 0) && (
+            <small>
+              {s.discount > 0 && `−${formatMoney(s.discount)} indirim`}
+              {s.discount > 0 && s.complimentary > 0 && " · "}
+              {s.complimentary > 0 && `${formatMoney(s.complimentary)} ikram`}
+            </small>
+          )}
         </div>
         <div>
           <span>Tahsil</span>
@@ -86,7 +93,12 @@ export function TabSummary({ data }: { data: TabData }) {
                       {item.name}
                       <small>{stations[item.station]}</small>
                     </span>
-                    <strong>{item.qty} adet</strong>
+                    <strong>
+                      {item.qty} adet
+                      {item.complimentaryQty > 0 && (
+                        <small> · {item.complimentaryQty} ikram</small>
+                      )}
+                    </strong>
                     <span className="tab-bar-amount">{formatMoney(item.amount)}</span>
                   </div>
                   <div className="tab-bar-track" aria-hidden="true">

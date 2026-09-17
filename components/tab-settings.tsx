@@ -2,6 +2,8 @@
 import { useState } from "react";
 import {
   addTabGuestsBulk,
+  deleteBankAccount,
+  deleteMenuItem,
   saveBankAccounts,
   saveMenu,
 } from "@/app/yonetim/adisyon/actions";
@@ -143,14 +145,39 @@ export function TabSettings({
                   ))}
                 </select>
               </label>
-              <button
-                type="button"
-                className="tab-chip"
-                aria-pressed={row.active}
-                onClick={() => edit(row.key, { active: !row.active })}
-              >
-                {row.active ? "Aktif" : "Pasif"}
-              </button>
+              <div className="tab-row-actions">
+                <button
+                  type="button"
+                  className="tab-chip"
+                  aria-pressed={row.active}
+                  onClick={() => edit(row.key, { active: !row.active })}
+                >
+                  {row.active ? "Aktif" : "Pasif"}
+                </button>
+                <button
+                  type="button"
+                  className="tab-x"
+                  aria-label={`${row.name || "ürün"} sil`}
+                  disabled={menuAction.busy}
+                  onClick={() => {
+                    if (row.id === null)
+                      return setDraft(rows.filter((r) => r.key !== row.key));
+                    if (!window.confirm(`${row.name} menüden silinsin mi? Geçmiş satışlar korunur.`))
+                      return;
+                    void menuAction.run(
+                      "Bağlantı kesildi.",
+                      () => deleteMenuItem(row.id as string),
+                      async () => {
+                        setDraft(null);
+                        notify("Ürün silindi");
+                        await refresh();
+                      },
+                    );
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -223,14 +250,38 @@ export function TabSettings({
                   onChange={(e) => editAccount(row.key, { iban: e.target.value })}
                 />
               </label>
-              <button
-                type="button"
-                className="tab-chip"
-                aria-pressed={row.active}
-                onClick={() => editAccount(row.key, { active: !row.active })}
-              >
-                {row.active ? "Aktif" : "Pasif"}
-              </button>
+              <div className="tab-row-actions">
+                <button
+                  type="button"
+                  className="tab-chip"
+                  aria-pressed={row.active}
+                  onClick={() => editAccount(row.key, { active: !row.active })}
+                >
+                  {row.active ? "Aktif" : "Pasif"}
+                </button>
+                <button
+                  type="button"
+                  className="tab-x"
+                  aria-label={`${row.label || "IBAN"} sil`}
+                  disabled={ibanAction.busy}
+                  onClick={() => {
+                    if (row.id === null)
+                      return setAccountDraft(accountRows.filter((r) => r.key !== row.key));
+                    if (!window.confirm(`${row.label} IBAN’ı silinsin mi?`)) return;
+                    void ibanAction.run(
+                      "Bağlantı kesildi.",
+                      () => deleteBankAccount(row.id as string),
+                      async () => {
+                        setAccountDraft(null);
+                        notify("IBAN silindi");
+                        await refresh();
+                      },
+                    );
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
             </div>
           ))}
         </div>

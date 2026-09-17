@@ -63,8 +63,21 @@ try{
  assert.ok((await action('addTabPayment',[guest,null,'iban',null],pizza.cookie)).body.includes('Hangi IBAN'));
  assert.ok((await action('saveBankAccounts',[[{id:null,label:'TEST hesap '+tag,iban:'TR00 0000 0000 0000 0000 0000 00',active:true}]],admin.cookie)).body.includes('"ok":true'));
  const [accountRow]=await sql`SELECT id FROM guest_event.bank_accounts WHERE label=${'TEST hesap '+tag}`;created.accounts.push(accountRow.id);
- const rest=await action('addTabPayment',[guest,null,'iban',accountRow.id],pizza.cookie);assert.ok(rest.body.includes('"status":"closed"'),'paying the balance closes the tab');assert.ok(rest.body.includes('TEST hesap '+tag),'payment carries the account label');
+ // Paying without closing keeps the tab open; closing takes the rest and closes.
+ const kept=await action('addTabPayment',[guest,null,'iban',accountRow.id,false],pizza.cookie);assert.ok(kept.body.includes('"status":"open"'),'paying the balance without closing keeps the tab open');
+ const kid=uuid(kept.body);assert.ok((await action('deleteTabPayment',[kid],pizza.cookie)).body.includes('"ok":true'));
+ assert.ok((await action('markIbanPending',[guest,accountRow.id],bar.cookie)).body.includes('"ok":true'));
+ const [pending]=await sql`SELECT pending_method FROM guest_event.tab_guests WHERE id=${guest}`;assert.equal(pending.pending_method,'iban');
+ assert.ok((await action('setGuestDiscount',[guest,50],bar.cookie)).body.includes('yönetici yetkisi'),'discounts are admin only');
+ assert.ok((await action('setGuestDiscount',[guest,50],admin.cookie)).body.includes('"ok":true'));
+ // Two more biras: one complimentary (0 ₺), one charged. With 50% off: (200+200)/2 = 200 owed, 100 already paid.
+ const line4=uuid((await action('addTabLine',[guest,bira.id],bar.cookie)).body);assert.ok((await action('setLineComplimentary',[line4,true],admin.cookie)).body.includes('"ok":true'));
+ assert.ok(uuid((await action('addTabLine',[guest,bira.id],bar.cookie)).body));
+ assert.ok((await action('addTabPayment',[guest,50,'cash',null,true],bar.cookie)).body.includes('kalanı kapatmıyor'),'closing with a partial amount is refused');
+ const rest=await action('addTabPayment',[guest,null,'iban',accountRow.id,true],pizza.cookie);assert.ok(rest.body.includes('"status":"closed"'),'paying the balance closes the tab');
+ const [cleared]=await sql`SELECT pending_method,discount_percent FROM guest_event.tab_guests WHERE id=${guest}`;assert.equal(cleared.pending_method,null,'a recorded payment clears the IBAN-pending state');assert.equal(cleared.discount_percent,50);assert.ok(rest.body.includes('TEST hesap '+tag),'payment carries the account label');
  const [stored]=await sql`SELECT bank_account_id FROM guest_event.tab_payments WHERE guest_id=${guest} AND method='iban'`;assert.equal(stored.bank_account_id,accountRow.id);
+ // Charged lines: two biras at 50% off = one bira; complimentary bira costs nothing.
  const paid=await sql`SELECT sum(amount)::int AS s FROM guest_event.tab_payments WHERE guest_id=${guest}`;assert.equal(paid[0].s,total);
  assert.ok((await action('addTabPayment',[guest,null,'cash'],bar.cookie)).body.includes('kalan borç yok'));
  const reopened=await action('addTabLine',[guest,bira.id],bar.cookie);assert.ok(reopened.body.includes('"status":"open"'),'adding to a closed tab reopens it');

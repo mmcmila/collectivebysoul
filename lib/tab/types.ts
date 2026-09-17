@@ -27,8 +27,16 @@ export type TabGuest = {
   status: TabStatus;
   /** Participant type when the tab was opened from the management console. */
   category: "paid" | "team" | "guest" | null;
+  /** 0–100; applied to the net of complimentary lines. */
+  discountPercent: number;
+  /** "iban": the guest will transfer later, tab stays open. */
+  pendingMethod: "iban" | null;
+  pendingAccountId: string | null;
+  pendingAccountLabel: string | null;
   createdAt: string;
 };
+
+export const discountOptions = [0, 10, 20, 50, 100] as const;
 
 /** Prices and amounts are integer kuruş: 250 ₺ = 25000. */
 export type MenuItem = {
@@ -48,6 +56,8 @@ export type TabLine = {
   price: number;
   qty: number;
   station: Station;
+  /** Given for free; counts as 0 ₺ but stays visible as "İkram". */
+  complimentary: boolean;
   createdBy: string | null;
   createdByName: string;
   createdAt: string;
