@@ -173,6 +173,9 @@ export function AdminPanel({ initial }: { initial: AdminData }) {
           >
             Hesap ayarları
           </button>
+          <Link href="/yonetim/hesap" className="ad-module-link">
+            Açık Hesap →
+          </Link>
           <Link href="/misafir">Misafir ekranı ↗</Link>
           <form action={logoutAdmin}>
             <button>Çıkış yap</button>
