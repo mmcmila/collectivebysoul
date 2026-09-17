@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { addTabGuest } from "@/app/yonetim/hesap/actions";
+import { addTabGuest } from "@/app/yonetim/adisyon/actions";
 import type { Notify } from "@/components/tab-module";
 import { useAction } from "@/hooks/use-action";
 import { formatMoney, guestRows, openSummary } from "@/lib/tab/calc";

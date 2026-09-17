@@ -6,7 +6,7 @@ import { loadTabData } from "@/lib/tab/data";
 import "../admin.css";
 import "./tab.css";
 export const metadata: Metadata = {
-  title: "Açık Hesap · Soul Collective",
+  title: "Adisyon · Soul Collective",
   robots: { index: false, follow: false },
 };
 export default async function TabPage() {

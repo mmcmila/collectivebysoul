@@ -19,7 +19,7 @@ export function AdminLogin() {
       <section>
         <span className="ad-kicker">ORGANİZASYON EKİBİ</span>
         <h1>Her şey bir arada.</h1>
-        <p>Katılımcılar, planlar, atölyeler ve Açık Hesap.</p>
+        <p>Katılımcılar, planlar, atölyeler ve Adisyon.</p>
         <form
           onSubmit={(e) => {
             e.preventDefault();

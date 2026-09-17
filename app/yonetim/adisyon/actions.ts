@@ -77,7 +77,7 @@ async function audit(
 
 export async function getTabData(): Promise<TabData> {
   const user = await currentAdmin();
-  if (!user) redirect("/yonetim/hesap");
+  if (!user) redirect("/yonetim/adisyon");
   return loadTabData(user);
 }
 

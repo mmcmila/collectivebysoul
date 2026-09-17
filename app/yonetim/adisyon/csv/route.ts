@@ -15,7 +15,7 @@ export async function GET() {
   return new Response("﻿" + buildCsv(data), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="acik-hesap-${stamp}.csv"`,
+      "Content-Disposition": `attachment; filename="adisyon-${stamp}.csv"`,
       "Cache-Control": "no-store",
     },
   });

@@ -133,7 +133,7 @@ export function TabModule({
       <header className="ad-header tab-header">
         <Link href="/" className="ad-brand">
           <Image src="/assets/brand-mark.png" alt="" width={32} height={40} />
-          Açık Hesap
+          Adisyon
         </Link>
         <div>
           <span className="tab-user">
@@ -145,7 +145,7 @@ export function TabModule({
           </form>
         </div>
       </header>
-      <nav className="tab-nav" aria-label="Açık Hesap bölümleri">
+      <nav className="tab-nav" aria-label="Adisyon bölümleri">
         <button
           aria-current={view === "list" ? "page" : undefined}
           onClick={() => showView("list")}

@@ -5,13 +5,13 @@ import {
   getStaffAccounts,
   regenerateStaffCode,
   setStaffActive,
-} from "@/app/yonetim/hesap/actions";
+} from "@/app/yonetim/adisyon/actions";
 import { useAction } from "@/hooks/use-action";
 import { staffRoles, type StaffAccount } from "@/lib/tab/types";
 
 /**
  * Bar / pizza login codes. Shared by the management console and the
- * Açık Hesap settings so the organiser can read, renew or close a code
+ * Adisyon settings so the organiser can read, renew or close a code
  * from either place.
  */
 export function StaffCodes() {
@@ -45,7 +45,7 @@ export function StaffCodes() {
     if (!account.code) return;
     try {
       await navigator.clipboard.writeText(
-        `${account.name} · Açık Hesap giriş kodu: ${account.code}\nhttps://collectivebysoul.com/yonetim`,
+        `${account.name} · Adisyon giriş kodu: ${account.code}\nhttps://collectivebysoul.com/yonetim`,
       );
       setCopied(account.id);
       setTimeout(() => setCopied(null), 2000);
@@ -58,7 +58,7 @@ export function StaffCodes() {
     <div className="ad-staff">
       <p className="ad-note">
         Bar ve pizza personeli /yonetim ekranındaki şifre alanına bu kodu
-        yazar ve doğrudan Açık Hesap’a girer; başka hiçbir şeyi görmez. Kodlar
+        yazar ve doğrudan Adisyon’a girer; başka hiçbir şeyi görmez. Kodlar
         burada açık durur; “Yeni kod” eskisini geçersiz kılar ve o hesabın açık
         oturumlarını kapatır.
       </p>

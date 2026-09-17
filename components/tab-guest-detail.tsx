@@ -7,7 +7,7 @@ import {
   deleteTabGuest,
   deleteTabLine,
   deleteTabPayment,
-} from "@/app/yonetim/hesap/actions";
+} from "@/app/yonetim/adisyon/actions";
 import type { Notify } from "@/components/tab-module";
 import {
   balanceMessage,

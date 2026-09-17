@@ -96,9 +96,9 @@ export function AdminSettings() {
         </button>
       </form>
       <div className="ad-section-heading ad-staff-heading">
-        <h2 id="staff-title">Açık Hesap girişleri</h2>
-        <Link href="/yonetim/hesap" className="ad-module-link">
-          Açık Hesap’ı aç →
+        <h2 id="staff-title">Adisyon girişleri</h2>
+        <Link href="/yonetim/adisyon" className="ad-module-link">
+          Adisyon’u aç →
         </Link>
       </div>
       <StaffCodes />
