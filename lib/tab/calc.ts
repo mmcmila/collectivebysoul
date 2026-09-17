@@ -472,6 +472,19 @@ export function describeAudit(entry: Pick<AuditEntry, "action" | "record" | "gue
   const r = entry.record;
   const num = (key: string) => (typeof r[key] === "number" ? (r[key] as number) : 0);
   const guest = entry.guestName ?? "Silinmiş misafir";
+  const str = (key: string) => (typeof r[key] === "string" ? (r[key] as string) : "");
+  if (entry.action === "staff.create")
+    return `Personel girişi oluşturuldu: ${str("name")} (${str("role") === "pizza" ? "Pizza" : "Bar"})`;
+  if (entry.action === "staff.rename")
+    return `Personel adı değişti: ${str("from")} → ${str("to")}`;
+  if (entry.action === "staff.code")
+    return `Yeni giriş kodu: ${str("name")}`;
+  if (entry.action === "staff.active")
+    return `Personel girişi ${r.active ? "açıldı" : "kapatıldı"}: ${str("name")}`;
+  if (entry.action === "discount.rules") {
+    const n = Array.isArray(r.rules) ? r.rules.length : 0;
+    return `İndirim kuralları güncellendi (${n} kural)`;
+  }
   if (entry.action === "line.complimentary")
     return `${guest}: ${String(r.name ?? "kalem")} ${r.complimentary ? "ikram yapıldı" : "ikramdan çıkarıldı"}`;
   if (entry.action === "guest.discount")

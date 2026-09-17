@@ -225,6 +225,11 @@ test("deletion log entries read as short Turkish sentences", () => {
     describeAudit({ action: "guest.delete", guestName: "Ali", record: { lines: [{}, {}], payments: [] } }),
     "Ali: misafir silindi (2 kalem, 0 ödeme)",
   );
+  assert.equal(describeAudit({ action: "staff.create", guestName: null, record: { name: "Ece", role: "pizza" } }), "Personel girişi oluşturuldu: Ece (Pizza)");
+  assert.equal(describeAudit({ action: "staff.rename", guestName: null, record: { from: "Ec", to: "Ece" } }), "Personel adı değişti: Ec → Ece");
+  assert.equal(describeAudit({ action: "staff.code", guestName: null, record: { name: "Ece" } }), "Yeni giriş kodu: Ece");
+  assert.equal(describeAudit({ action: "staff.active", guestName: null, record: { name: "Ece", active: false } }), "Personel girişi kapatıldı: Ece");
+  assert.equal(describeAudit({ action: "discount.rules", guestName: null, record: { rules: [{}, {}] } }), "İndirim kuralları güncellendi (2 kural)");
 });
 
 test("balance message carries name, balance and IBAN text", () => {

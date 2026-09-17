@@ -3,11 +3,18 @@ import { useCallback, useEffect, useState } from "react";
 import {
   createStaffAccount,
   getStaffAccounts,
+  getStaffAudit,
   regenerateStaffCode,
+  renameStaffAccount,
   setStaffActive,
 } from "@/app/yonetim/adisyon/actions";
+import { describeAudit, formatDateTime } from "@/lib/tab/calc";
 import { useAction } from "@/hooks/use-action";
-import { staffRoles, type StaffAccount } from "@/lib/tab/types";
+import {
+  staffRoles,
+  type AuditEntry,
+  type StaffAccount,
+} from "@/lib/tab/types";
 
 /**
  * Bar / pizza login codes. Shared by the management console and the
@@ -22,6 +29,19 @@ export function StaffCodes() {
   const [copied, setCopied] = useState<string | null>(null);
   const create = useAction();
   const change = useAction();
+  const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
+  const [history, setHistory] = useState<AuditEntry[] | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const loadHistory = useCallback(
+    () =>
+      getStaffAudit().then(
+        (r) => {
+          if (r.ok) setHistory(r.entries);
+        },
+        () => {},
+      ),
+    [],
+  );
 
   const load = useCallback(
     () =>
@@ -72,10 +92,50 @@ export function StaffCodes() {
           {staff.map((s) => (
             <li key={s.id} className={s.active ? "" : "inactive"}>
               <div className="ad-staff-main">
-                <strong>{s.name}</strong>
-                <small>
-                  {staffRoles[s.role]} · {s.active ? "Aktif" : "Kapalı"}
-                </small>
+                {editing?.id === s.id ? (
+                  <form
+                    className="ad-staff-rename"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void change.run(
+                        "Bağlantı kesildi.",
+                        () => renameStaffAccount(s.id, editing.name),
+                        async () => {
+                          setEditing(null);
+                          await load();
+                          if (historyOpen) await loadHistory();
+                        },
+                      );
+                    }}
+                  >
+                    <input
+                      autoFocus
+                      required
+                      minLength={2}
+                      maxLength={60}
+                      aria-label="Personel adı"
+                      value={editing.name}
+                      onChange={(e) => setEditing({ id: s.id, name: e.target.value })}
+                    />
+                    <button className="ad-primary" disabled={change.busy}>
+                      Kaydet
+                    </button>
+                    <button
+                      type="button"
+                      className="ad-detail-button"
+                      onClick={() => setEditing(null)}
+                    >
+                      Vazgeç
+                    </button>
+                  </form>
+                ) : (
+                  <>
+                    <strong>{s.name}</strong>
+                    <small>
+                      {staffRoles[s.role]} · {s.active ? "Aktif" : "Kapalı"}
+                    </small>
+                  </>
+                )}
               </div>
               <code aria-label={`${s.name} giriş kodu`}>{s.code ?? "—"}</code>
               <div className="ad-staff-actions">
@@ -91,6 +151,14 @@ export function StaffCodes() {
                   type="button"
                   className="ad-detail-button"
                   disabled={change.busy}
+                  onClick={() => setEditing({ id: s.id, name: s.name })}
+                >
+                  Adı düzenle
+                </button>
+                <button
+                  type="button"
+                  className="ad-detail-button"
+                  disabled={change.busy}
                   onClick={() => {
                     if (
                       !window.confirm(
@@ -101,7 +169,10 @@ export function StaffCodes() {
                     void change.run(
                       "Bağlantı kesildi.",
                       () => regenerateStaffCode(s.id),
-                      load,
+                      async () => {
+                        await load();
+                        if (historyOpen) await loadHistory();
+                      },
                     );
                   }}
                 >
@@ -122,7 +193,10 @@ export function StaffCodes() {
                     void change.run(
                       "Bağlantı kesildi.",
                       () => setStaffActive(s.id, !s.active),
-                      load,
+                      async () => {
+                        await load();
+                        if (historyOpen) await loadHistory();
+                      },
                     );
                   }}
                 >
@@ -151,6 +225,7 @@ export function StaffCodes() {
             async () => {
               setName("");
               await load();
+              if (historyOpen) await loadHistory();
             },
           );
         }}
@@ -184,6 +259,33 @@ export function StaffCodes() {
           </p>
         )}
       </form>
+      <details
+        className="ad-staff-history"
+        open={historyOpen}
+        onToggle={(e) => {
+          const open = (e.currentTarget as HTMLDetailsElement).open;
+          setHistoryOpen(open);
+          if (open && history === null) void loadHistory();
+        }}
+      >
+        <summary>Geçmiş hareketler</summary>
+        {history === null ? (
+          <p className="ad-note">Yükleniyor…</p>
+        ) : history.length ? (
+          <ul>
+            {history.map((h) => (
+              <li key={h.id}>
+                <span>{describeAudit(h)}</span>
+                <small>
+                  {formatDateTime(h.createdAt)} · {h.actorName}
+                </small>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="ad-note">Henüz kayıt yok.</p>
+        )}
+      </details>
     </div>
   );
 }

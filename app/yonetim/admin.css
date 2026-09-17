@@ -874,3 +874,43 @@
   color: #97743b;
   font-size: 11px;
 }
+.ad-staff-rename {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.ad-staff-rename input {
+  flex: 1 1 160px;
+}
+.ad-staff-history {
+  margin-top: 18px;
+  font-size: 12px;
+}
+.ad-staff-history summary {
+  color: #606f50;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+.ad-staff-history ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  border: 1px solid #dfe1d7;
+  border-radius: 10px;
+  background: #fffefa;
+}
+.ad-staff-history li {
+  display: grid;
+  gap: 2px;
+  padding: 10px 14px;
+  border-top: 1px solid #e8e9df;
+}
+.ad-staff-history li:first-child {
+  border-top: 0;
+}
+.ad-staff-history small {
+  color: #7b836c;
+  font-size: 11px;
+}

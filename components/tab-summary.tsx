@@ -134,10 +134,11 @@ export function TabSummary({ data }: { data: TabData }) {
       </section>
       {data.audit.length > 0 && (
         <section className="tab-card" aria-labelledby="tab-audit">
-          <h2 id="tab-audit">Silme kaydı</h2>
+          <h2 id="tab-audit">Hareket kaydı</h2>
           <p className="ad-note">
-            Yanlış girişleri düzeltmek için silinen kalemler ve ödemeler; kim,
-            ne zaman. Yalnızca yönetici görür.
+            Silinen kalemler ve ödemeler, ikram ve indirim değişiklikleri,
+            personel girişleri; kim, ne zaman. Son 50 hareket, yalnızca
+            yönetici görür.
           </p>
           <ul className="tab-lines tab-audit">
             {data.audit.map((entry) => (
