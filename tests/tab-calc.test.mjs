@@ -26,8 +26,12 @@ const lines = [
   { id: "l3", guestId: "b", menuItemId: null, name: "Kokteyl", price: 40000, qty: 1, station: "bar", createdBy: "u-bar", createdByName: "Bar", createdAt: "2026-09-19T18:20:00.000Z" },
 ];
 const payments = [
-  { id: "p1", guestId: "a", amount: 30000, method: "cash", createdBy: "u-bar", createdByName: "Bar", createdAt: "2026-09-19T19:00:00.000Z" },
-  { id: "p2", guestId: "b", amount: 40000, method: "iban", createdBy: "u-bar", createdByName: "Bar", createdAt: "2026-09-19T19:30:00.000Z" },
+  { id: "p1", guestId: "a", amount: 30000, method: "cash", accountId: null, accountLabel: null, createdBy: "u-bar", createdByName: "Bar", createdAt: "2026-09-19T19:00:00.000Z" },
+  { id: "p2", guestId: "b", amount: 40000, method: "iban", accountId: "acc-1", accountLabel: "Merve", createdBy: "u-bar", createdByName: "Bar", createdAt: "2026-09-19T19:30:00.000Z" },
+];
+const accounts = [
+  { id: "acc-1", label: "Merve", iban: "TR00 1", active: true, sortOrder: 1 },
+  { id: "acc-2", label: "Can", iban: "TR00 2", active: true, sortOrder: 2 },
 ];
 const guests = [
   { id: "a", name: "Şule Çınar", status: "open", createdAt: "2026-09-19T17:00:00.000Z" },
@@ -117,23 +121,27 @@ test("summary groups by method, station and item, and lists debtors", () => {
   assert.equal(s.total, 105000);
   assert.equal(s.paid, 70000);
   assert.equal(s.due, 35000);
-  assert.deepEqual(s.byMethod, { cash: 30000, iban: 40000 });
+  assert.deepEqual(s.byMethod, { cash: 30000, iban: 40000, pos: 0 });
   assert.deepEqual(s.byStation, { bar: 80000, pizza: 25000 });
   assert.deepEqual(s.byItem, [
-    { name: "Bira", qty: 2, amount: 40000 },
-    { name: "Kokteyl", qty: 1, amount: 40000 },
-    { name: "Pizza dilim", qty: 1, amount: 25000 },
+    { name: "Bira", qty: 2, amount: 40000, station: "bar" },
+    { name: "Kokteyl", qty: 1, amount: 40000, station: "bar" },
+    { name: "Pizza dilim", qty: 1, amount: 25000, station: "pizza" },
   ]);
   assert.deepEqual(s.debtors, [{ id: "a", name: "Şule Çınar", due: 35000 }]);
+  assert.deepEqual(summarize({ guests, lines, payments, accounts }).byAccount, [
+    { id: "acc-1", label: "Merve", iban: "TR00 1", amount: 40000, count: 1 },
+    { id: "acc-2", label: "Can", iban: "TR00 2", amount: 0, count: 0 },
+  ]);
 });
 
 test("CSV uses semicolons, decimal commas, and one row per line and payment", () => {
   const csv = buildCsv({ guests, lines, payments });
   const rows = csv.trim().split("\r\n");
-  assert.equal(rows[0], "tip;misafir;urun;adet;fiyat;tutar;istasyon_veya_yontem;kullanici;zaman");
+  assert.equal(rows[0], "tip;misafir;urun;adet;fiyat;tutar;istasyon_veya_yontem;iban_hesabi;kullanici;zaman");
   assert.equal(rows.length, 1 + lines.length + payments.length);
-  assert.equal(rows[1], "satis;Şule Çınar;Bira;2;200,00;400,00;bar;Bar;2026-09-19 21:05:00");
-  assert.ok(rows.some((r) => r.startsWith("odeme;Ali Işık;;;;400,00;iban;Bar;")));
+  assert.equal(rows[1], "satis;Şule Çınar;Bira;2;200,00;400,00;bar;;Bar;2026-09-19 21:05:00");
+  assert.ok(rows.some((r) => r.startsWith("odeme;Ali Işık;;;;400,00;iban;Merve;Bar;")));
   const quoted = buildCsv({ guests: [{ ...guests[0], name: 'A "B"; C' }], lines: lines.slice(0, 1), payments: [] });
   assert.ok(quoted.includes('"A ""B""; C"'));
 });

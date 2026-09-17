@@ -18,6 +18,7 @@ import {
   isPaymentMethod,
   isStaffRole,
   isStation,
+  type BankAccountDraft,
   type MenuDraftItem,
   type StaffAccount,
   type StaffRole,
@@ -211,6 +212,7 @@ export async function addTabPayment(
   guestId: string,
   amount: number | null,
   method: string,
+  accountId: string | null = null,
 ) {
   const user = await currentAdmin();
   if (!user) return fail(null, SESSION_ERROR);
@@ -218,14 +220,23 @@ export async function addTabPayment(
     return fail(null, "Geçersiz misafir veya ödeme yöntemi.");
   if (amount !== null && (typeof amount !== "number" || amount > 100_000_000))
     return fail(null, "Tutarı kontrol et.");
+  if (method === "iban" && !isUuid(accountId))
+    return fail(null, "Hangi IBAN'a ödendiğini seç.");
   try {
     const result = await guestDb().begin(async (tx) => {
       await lockGuest(tx, guestId);
+      let account: { id: string; label: string } | null = null;
+      if (method === "iban") {
+        const [row] =
+          await tx`SELECT id,label FROM guest_event.bank_accounts WHERE id=${accountId as string} AND active`;
+        if (!row) throw new UserError("Bu IBAN artık kullanımda değil. Ayarları yenile.");
+        account = { id: row.id, label: row.label };
+      }
       const { due } = await balance(tx, guestId);
       const resolved = resolvePaymentAmount(amount, due);
       if ("error" in resolved) throw new UserError(resolved.error);
       const [payment] =
-        await tx`INSERT INTO guest_event.tab_payments(guest_id,amount,method,created_by) VALUES(${guestId},${resolved.amount},${method},${user.id}) RETURNING id,created_at`;
+        await tx`INSERT INTO guest_event.tab_payments(guest_id,amount,method,bank_account_id,created_by) VALUES(${guestId},${resolved.amount},${method},${account?.id ?? null},${user.id}) RETURNING id,created_at`;
       const status = statusAfterPayment(due - resolved.amount);
       await tx`UPDATE guest_event.tab_guests SET status=${status} WHERE id=${guestId}`;
       const created: TabPayment = {
@@ -233,6 +244,8 @@ export async function addTabPayment(
         guestId,
         amount: resolved.amount,
         method,
+        accountId: account?.id ?? null,
+        accountLabel: account?.label ?? null,
         createdBy: user.id,
         createdByName: user.name,
         createdAt: payment.created_at.toISOString(),
@@ -252,7 +265,7 @@ export async function deleteTabPayment(paymentId: string) {
   try {
     await guestDb().begin(async (tx) => {
       const [payment] =
-        await tx`SELECT id,guest_id,amount,method,created_by,created_at FROM guest_event.tab_payments WHERE id=${paymentId} FOR UPDATE`;
+        await tx`SELECT id,guest_id,amount,method,bank_account_id,created_by,created_at FROM guest_event.tab_payments WHERE id=${paymentId} FOR UPDATE`;
       if (!payment) throw new UserError("Bu ödeme zaten silinmiş.");
       if (!canDeleteRecord(user, { createdBy: payment.created_by }))
         throw new UserError(
@@ -332,16 +345,37 @@ export async function saveMenu(items: MenuDraftItem[]) {
   }
 }
 
-export async function saveBarIban(text: string) {
+export async function saveBankAccounts(items: BankAccountDraft[]) {
   const user = await currentOrganiser();
   if (!user) return fail(null, ADMIN_ERROR);
-  const clean = typeof text === "string" ? text.trim() : "";
-  if (clean.length > 200) return fail(null, "IBAN metni 200 karakteri geçmesin.");
+  if (!Array.isArray(items) || items.length > 50)
+    return fail(null, "IBAN listesi kaydedilemedi.");
+  const clean = items.map((item, index) => ({
+    id: item?.id === null ? null : item?.id,
+    label: cleanName(item?.label),
+    iban: typeof item?.iban === "string" ? item.iban.replace(/\s+/g, " ").trim() : "",
+    active: item?.active === true,
+    sortOrder: index + 1,
+  }));
+  for (const item of clean) {
+    if (item.id !== null && !isUuid(item.id)) return fail(null, "Geçersiz IBAN kaydı.");
+    if (item.label.length < 1 || item.label.length > 80)
+      return fail(null, "Her IBAN için kimin hesabı olduğunu yaz.");
+    if (item.iban.length < 5 || item.iban.length > 60)
+      return fail(null, `"${item.label}" için IBAN'ı kontrol et.`);
+  }
   try {
-    await guestDb()`INSERT INTO guest_event.settings(key,value,updated_at) VALUES('bar_iban',${clean},now()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value,updated_at=now()`;
+    await guestDb().begin(async (tx) => {
+      for (const item of clean) {
+        if (item.id === null)
+          await tx`INSERT INTO guest_event.bank_accounts(label,iban,active,sort_order) VALUES(${item.label},${item.iban},${item.active},${item.sortOrder})`;
+        else
+          await tx`UPDATE guest_event.bank_accounts SET label=${item.label},iban=${item.iban},active=${item.active},sort_order=${item.sortOrder} WHERE id=${item.id}`;
+      }
+    });
     return ok({});
   } catch {
-    return fail(null, "IBAN kaydedilemedi.");
+    return fail(null, "IBAN listesi kaydedilemedi. Tekrar dene.");
   }
 }
 

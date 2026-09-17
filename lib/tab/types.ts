@@ -12,7 +12,7 @@ export type StaffRole = keyof typeof staffRoles;
 export const isStaffRole = (value: unknown): value is StaffRole =>
   typeof value === "string" && Object.hasOwn(staffRoles, value);
 
-export const paymentMethods = { cash: "Nakit", iban: "IBAN" } as const;
+export const paymentMethods = { cash: "Nakit", iban: "IBAN", pos: "POS" } as const;
 export type PaymentMethod = keyof typeof paymentMethods;
 export const isPaymentMethod = (value: unknown): value is PaymentMethod =>
   typeof value === "string" && Object.hasOwn(paymentMethods, value);
@@ -56,9 +56,28 @@ export type TabPayment = {
   guestId: string;
   amount: number;
   method: PaymentMethod;
+  /** Which IBAN the guest paid to; only for method "iban". */
+  accountId: string | null;
+  accountLabel: string | null;
   createdBy: string | null;
   createdByName: string;
   createdAt: string;
+};
+
+export type BankAccount = {
+  id: string;
+  /** Whose account it is, e.g. "Merve". */
+  label: string;
+  iban: string;
+  active: boolean;
+  sortOrder: number;
+};
+
+export type BankAccountDraft = {
+  id: string | null;
+  label: string;
+  iban: string;
+  active: boolean;
 };
 
 export type StaffAccount = {
@@ -88,7 +107,7 @@ export type TabData = {
   menu: MenuItem[];
   lines: TabLine[];
   payments: TabPayment[];
-  iban: string;
+  accounts: BankAccount[];
   /** Latest deletions; only sent to admins. */
   audit: AuditEntry[];
   fetchedAt: string;

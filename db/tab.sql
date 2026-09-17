@@ -80,8 +80,25 @@ SELECT * FROM (VALUES
 ) AS seed(name,price,station,sort_order)
 WHERE NOT EXISTS (SELECT 1 FROM guest_event.menu_items);
 
+-- Several IBANs (whose account it is + IBAN); a payment records which one it went to.
+CREATE TABLE IF NOT EXISTS guest_event.bank_accounts (
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ label text NOT NULL CHECK (length(btrim(label)) BETWEEN 1 AND 80),
+ iban text NOT NULL CHECK (length(btrim(iban)) BETWEEN 5 AND 60),
+ active boolean NOT NULL DEFAULT true,
+ sort_order integer NOT NULL DEFAULT 0,
+ created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE guest_event.tab_payments ADD COLUMN IF NOT EXISTS bank_account_id uuid REFERENCES guest_event.bank_accounts(id) ON DELETE SET NULL;
+ALTER TABLE guest_event.tab_payments DROP CONSTRAINT IF EXISTS tab_payments_method_check;
+ALTER TABLE guest_event.tab_payments ADD CONSTRAINT tab_payments_method_check CHECK (method IN ('cash','iban','pos'));
+-- Carry an IBAN text entered before this table existed over as the first account.
+INSERT INTO guest_event.bank_accounts(label,iban,sort_order)
+SELECT 'Organizatör', value, 1 FROM guest_event.settings
+WHERE key='bar_iban' AND btrim(value)<>'' AND NOT EXISTS (SELECT 1 FROM guest_event.bank_accounts);
+
 REVOKE ALL ON guest_event.tab_guests, guest_event.menu_items, guest_event.tab_lines,
- guest_event.tab_payments, guest_event.tab_audit, guest_event.settings
+ guest_event.tab_payments, guest_event.tab_audit, guest_event.settings, guest_event.bank_accounts
  FROM PUBLIC, anon, authenticated;
 
 COMMIT;

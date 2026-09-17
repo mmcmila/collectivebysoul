@@ -2,7 +2,7 @@
 import { useState } from "react";
 import {
   addTabGuestsBulk,
-  saveBarIban,
+  saveBankAccounts,
   saveMenu,
 } from "@/app/yonetim/adisyon/actions";
 import { StaffCodes } from "@/components/staff-codes";
@@ -11,6 +11,7 @@ import { useAction } from "@/hooks/use-action";
 import { formatLiraInput, parseAmount } from "@/lib/tab/calc";
 import {
   stations,
+  type BankAccountDraft,
   type MenuDraftItem,
   type Station,
   type TabData,
@@ -42,7 +43,21 @@ export function TabSettings({
   const dirty = draft !== null;
   const rows = draft ?? toDraft(data.menu);
   const menuAction = useAction();
-  const [iban, setIban] = useState(data.iban);
+  type AccountRow = BankAccountDraft & { key: string };
+  const toAccountDraft = (accounts: TabData["accounts"]): AccountRow[] =>
+    accounts.map((a) => ({
+      key: a.id,
+      id: a.id,
+      label: a.label,
+      iban: a.iban,
+      active: a.active,
+    }));
+  const [accountDraft, setAccountDraft] = useState<AccountRow[] | null>(null);
+  const accountRows = accountDraft ?? toAccountDraft(data.accounts);
+  const editAccount = (key: string, patch: Partial<AccountRow>) =>
+    setAccountDraft(
+      accountRows.map((r) => (r.key === key ? { ...r, ...patch } : r)),
+    );
   const ibanAction = useAction();
   const [bulk, setBulk] = useState("");
   const bulkAction = useAction();
@@ -175,41 +190,97 @@ export function TabSettings({
       </section>
 
       <section className="tab-card" aria-labelledby="tab-iban-title">
-        <h2 id="tab-iban-title">IBAN</h2>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void ibanAction.run(
-              "Bağlantı kesildi. IBAN kaydedilmedi.",
-              () => saveBarIban(iban),
-              async () => {
-                notify("IBAN kaydedildi");
-                await refresh();
-              },
-            );
-          }}
-        >
-          <label htmlFor="tab-iban-input">
-            Misafire gösterilecek metin (ad soyad + IBAN)
-          </label>
-          <div className="tab-row">
-            <input
-              id="tab-iban-input"
-              maxLength={200}
-              placeholder="Ad Soyad · TR00 0000 0000 0000 0000 0000 00"
-              value={iban}
-              onChange={(e) => setIban(e.target.value)}
-            />
-            <button className="ad-primary" disabled={ibanAction.busy}>
-              Kaydet
-            </button>
-          </div>
-          {ibanAction.error && (
-            <p className="ad-error" role="alert">
-              {ibanAction.error}
-            </p>
-          )}
-        </form>
+        <h2 id="tab-iban-title">IBAN hesapları</h2>
+        <p className="ad-note">
+          Birden fazla IBAN olabilir; ödeme alınırken hangi hesaba ödendiği
+          seçilir ve Özet’te hesap bazında görünür. Pasif hesap ödeme ekranında
+          çıkmaz, eski ödemeleri korunur.
+        </p>
+        <div className="tab-menu-edit">
+          {accountRows.map((row, index) => (
+            <div
+              key={row.key}
+              className={`tab-menu-row tab-account-row ${row.active ? "" : "passive"}`}
+            >
+              <label>
+                <span>Kimin hesabı</span>
+                <input
+                  value={row.label}
+                  maxLength={80}
+                  placeholder="Örn. Merve"
+                  aria-label={`${index + 1}. IBAN sahibi`}
+                  onChange={(e) => editAccount(row.key, { label: e.target.value })}
+                />
+              </label>
+              <label>
+                <span>IBAN</span>
+                <input
+                  value={row.iban}
+                  maxLength={60}
+                  autoComplete="off"
+                  placeholder="TR00 0000 0000 0000 0000 0000 00"
+                  aria-label={`${row.label || index + 1 + ". hesap"} IBAN`}
+                  onChange={(e) => editAccount(row.key, { iban: e.target.value })}
+                />
+              </label>
+              <button
+                type="button"
+                className="tab-chip"
+                aria-pressed={row.active}
+                onClick={() => editAccount(row.key, { active: !row.active })}
+              >
+                {row.active ? "Aktif" : "Pasif"}
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="tab-row">
+          <button
+            type="button"
+            className="tab-secondary"
+            onClick={() =>
+              setAccountDraft([
+                ...accountRows,
+                {
+                  key: "new-" + crypto.randomUUID(),
+                  id: null,
+                  label: "",
+                  iban: "",
+                  active: true,
+                },
+              ])
+            }
+          >
+            + IBAN
+          </button>
+          <button
+            className="ad-primary"
+            disabled={ibanAction.busy || accountDraft === null}
+            onClick={() =>
+              void ibanAction.run(
+                "Bağlantı kesildi. IBAN listesi kaydedilmedi.",
+                () =>
+                  saveBankAccounts(
+                    accountRows
+                      .filter((r) => r.id !== null || r.label.trim() || r.iban.trim())
+                      .map(({ id, label, iban, active }) => ({ id, label, iban, active })),
+                  ),
+                async () => {
+                  setAccountDraft(null);
+                  notify("IBAN listesi kaydedildi");
+                  await refresh();
+                },
+              )
+            }
+          >
+            {ibanAction.busy ? "Kaydediliyor…" : "IBAN’ları kaydet"}
+          </button>
+        </div>
+        {ibanAction.error && (
+          <p className="ad-error" role="alert">
+            {ibanAction.error}
+          </p>
+        )}
       </section>
 
       <section className="tab-card" aria-labelledby="tab-bulk-title">

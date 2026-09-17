@@ -53,27 +53,52 @@ export function TabSummary({ data }: { data: TabData }) {
           </table>
         </section>
       </div>
-      <section className="tab-card" aria-labelledby="tab-items">
-        <h2 id="tab-items">Ürün bazında</h2>
-        {s.byItem.length ? (
+      {s.byAccount.length > 0 && (
+        <section className="tab-card" aria-labelledby="tab-accounts">
+          <h2 id="tab-accounts">IBAN hesaplarına göre</h2>
           <table className="tab-table">
-            <thead>
-              <tr>
-                <th scope="col">Ürün</th>
-                <th scope="col">Adet</th>
-                <th scope="col">Tutar</th>
-              </tr>
-            </thead>
             <tbody>
-              {s.byItem.map((item) => (
-                <tr key={item.name}>
-                  <th scope="row">{item.name}</th>
-                  <td>{item.qty}</td>
-                  <td>{formatMoney(item.amount)}</td>
+              {s.byAccount.map((a) => (
+                <tr key={a.id}>
+                  <th scope="row">
+                    {a.label}
+                    <small className="tab-table-sub">
+                      {a.count} ödeme{a.iban ? ` · ${a.iban}` : ""}
+                    </small>
+                  </th>
+                  <td>{formatMoney(a.amount)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </section>
+      )}
+      <section className="tab-card" aria-labelledby="tab-items">
+        <h2 id="tab-items">Satılan ürünler</h2>
+        {s.byItem.length ? (
+          <ul className="tab-bars">
+            {s.byItem.map((item) => {
+              const max = s.byItem[0].qty || 1;
+              return (
+                <li key={item.name}>
+                  <div className="tab-bar-head">
+                    <span className="tab-bar-name">
+                      {item.name}
+                      <small>{stations[item.station]}</small>
+                    </span>
+                    <strong>{item.qty} adet</strong>
+                    <span className="tab-bar-amount">{formatMoney(item.amount)}</span>
+                  </div>
+                  <div className="tab-bar-track" aria-hidden="true">
+                    <div
+                      className={`tab-bar-fill ${item.station}`}
+                      style={{ width: `${Math.max(4, (item.qty / max) * 100)}%` }}
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         ) : (
           <p className="ad-note">Henüz satış yok.</p>
         )}

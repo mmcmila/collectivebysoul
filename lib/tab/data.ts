@@ -2,6 +2,7 @@ import "server-only";
 import { guestDb } from "@/lib/guest/db";
 import type {
   AuditEntry,
+  BankAccount,
   MenuItem,
   StaffUser,
   TabData,
@@ -22,9 +23,9 @@ export async function loadTabData(user: StaffUser): Promise<TabData> {
   const lines =
     await sql`SELECT l.id,l.guest_id,l.menu_item_id,l.name,l.price,l.qty,l.station,l.created_by,COALESCE(a.name,'') AS created_by_name,l.created_at FROM guest_event.tab_lines l LEFT JOIN guest_event.admins a ON a.id=l.created_by ORDER BY l.created_at DESC`;
   const payments =
-    await sql`SELECT p.id,p.guest_id,p.amount,p.method,p.created_by,COALESCE(a.name,'') AS created_by_name,p.created_at FROM guest_event.tab_payments p LEFT JOIN guest_event.admins a ON a.id=p.created_by ORDER BY p.created_at`;
-  const settings =
-    await sql`SELECT value FROM guest_event.settings WHERE key='bar_iban'`;
+    await sql`SELECT p.id,p.guest_id,p.amount,p.method,p.bank_account_id,b.label AS account_label,p.created_by,COALESCE(a.name,'') AS created_by_name,p.created_at FROM guest_event.tab_payments p LEFT JOIN guest_event.admins a ON a.id=p.created_by LEFT JOIN guest_event.bank_accounts b ON b.id=p.bank_account_id ORDER BY p.created_at`;
+  const accounts =
+    await sql`SELECT id,label,iban,active,sort_order FROM guest_event.bank_accounts ORDER BY sort_order,label`;
   const audit =
     user.role === "admin"
       ? await sql`SELECT a.id,a.action,a.record,a.actor_name,a.created_at,COALESCE(g.name,a.record->'guest'->>'name') AS guest_name FROM guest_event.tab_audit a LEFT JOIN guest_event.tab_guests g ON g.id=a.guest_id ORDER BY a.created_at DESC LIMIT 50`
@@ -68,12 +69,22 @@ export async function loadTabData(user: StaffUser): Promise<TabData> {
         guestId: p.guest_id,
         amount: p.amount,
         method: p.method,
+        accountId: p.bank_account_id,
+        accountLabel: p.account_label,
         createdBy: p.created_by,
         createdByName: p.created_by_name,
         createdAt: p.created_at.toISOString(),
       }),
     ),
-    iban: settings[0]?.value ?? "",
+    accounts: accounts.map(
+      (b): BankAccount => ({
+        id: b.id,
+        label: b.label,
+        iban: b.iban,
+        active: b.active,
+        sortOrder: b.sort_order,
+      }),
+    ),
     audit: (audit as { id: string; action: string; record: Record<string, unknown>; actor_name: string; created_at: Date; guest_name: string | null }[]).map(
       (a): AuditEntry => ({
         id: a.id,

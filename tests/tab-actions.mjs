@@ -14,7 +14,7 @@ async function action(name,args,cookie=''){
 }
 const uuid=body=>body.match(/"id":"([a-f0-9-]{36})"/)?.[1];
 const sql=postgres(process.env.POSTGRES_URL,{ssl:'require',max:1});const hash=x=>createHash('sha256').update(x).digest('hex');
-const tag=randomUUID().slice(0,8);const created={admins:[],guests:[]};
+const tag=randomUUID().slice(0,8);const created={admins:[],guests:[],accounts:[]};
 async function staff(role){
  const [a]=await sql`INSERT INTO guest_event.admins(name,code_hash,role) VALUES(${'TEST '+role+' '+tag},${hash(randomBytes(16).toString('hex'))},${role}) RETURNING id`;
  const token=randomBytes(32).toString('hex');
@@ -28,7 +28,7 @@ try{
  // Bar staff see the module but never the organiser console or admin-only actions.
  const barData=await action('getTabData',[],bar.cookie);assert.ok(barData.body.includes('"menu"'));assert.ok((await action('getStaffAccounts',[],bar.cookie)).body.includes('yönetici yetkisi'),'staff codes are admin only');
  assert.ok(!(await action('getAdminData',[],bar.cookie)).body.includes('"workshops"'),'bar must not read the organiser console');
- for(const [name,args] of [['saveMenu',[[]]],['saveBarIban',['x']],['addTabGuestsBulk',['TEST']],['createStaffAccount',['TEST x','bar']]])
+ for(const [name,args] of [['saveMenu',[[]]],['saveBankAccounts',[[]]],['addTabGuestsBulk',['TEST']],['createStaffAccount',['TEST x','bar']]])
   assert.ok((await action(name,args,bar.cookie)).body.includes('yönetici yetkisi'),name+' must be admin only');
  // Guest and lines.
  // Readable staff codes: created, listed, renewed, and usable for login.
@@ -55,8 +55,13 @@ try{
  // Close rules.
  const total=bira.price;
  assert.ok((await action('closeTabGuest',[guest],bar.cookie)).body.includes('Kalan borç varken'));
- const partial=await action('addTabPayment',[guest,100,'cash'],bar.cookie);assert.ok(partial.body.includes('"status":"open"'));
- const rest=await action('addTabPayment',[guest,null,'iban'],pizza.cookie);assert.ok(rest.body.includes('"status":"closed"'),'paying the balance closes the tab');
+ const partial=await action('addTabPayment',[guest,100,'pos'],bar.cookie);assert.ok(partial.body.includes('"status":"open"'));
+ // IBAN payments must say which account they went to.
+ assert.ok((await action('addTabPayment',[guest,null,'iban',null],pizza.cookie)).body.includes('Hangi IBAN'));
+ assert.ok((await action('saveBankAccounts',[[{id:null,label:'TEST hesap '+tag,iban:'TR00 0000 0000 0000 0000 0000 00',active:true}]],admin.cookie)).body.includes('"ok":true'));
+ const [accountRow]=await sql`SELECT id FROM guest_event.bank_accounts WHERE label=${'TEST hesap '+tag}`;created.accounts.push(accountRow.id);
+ const rest=await action('addTabPayment',[guest,null,'iban',accountRow.id],pizza.cookie);assert.ok(rest.body.includes('"status":"closed"'),'paying the balance closes the tab');assert.ok(rest.body.includes('TEST hesap '+tag),'payment carries the account label');
+ const [stored]=await sql`SELECT bank_account_id FROM guest_event.tab_payments WHERE guest_id=${guest} AND method='iban'`;assert.equal(stored.bank_account_id,accountRow.id);
  const paid=await sql`SELECT sum(amount)::int AS s FROM guest_event.tab_payments WHERE guest_id=${guest}`;assert.equal(paid[0].s,total);
  assert.ok((await action('addTabPayment',[guest,null,'cash'],bar.cookie)).body.includes('kalan borç yok'));
  const reopened=await action('addTabLine',[guest,bira.id],bar.cookie);assert.ok(reopened.body.includes('"status":"open"'),'adding to a closed tab reopens it');
@@ -70,6 +75,7 @@ try{
  console.log('PASS: anonymous denied, bar/pizza limited to the module, admin-only settings, readable staff codes (create/list/login/renew), new row per add with price snapshot, owner/admin deletion with audit log, close/reopen rules.');
 }finally{
  for(const g of created.guests)await sql`DELETE FROM guest_event.tab_guests WHERE id=${g}`;
+ for(const a of created.accounts)await sql`DELETE FROM guest_event.bank_accounts WHERE id=${a}`;
  await sql`DELETE FROM guest_event.tab_audit WHERE actor_id=ANY(${created.admins}::uuid[])`;
  for(const a of created.admins)await sql`DELETE FROM guest_event.admins WHERE id=${a}`;
  await sql.end();
