@@ -97,6 +97,17 @@ INSERT INTO guest_event.bank_accounts(label,iban,sort_order)
 SELECT 'Organizatör', value, 1 FROM guest_event.settings
 WHERE key='bar_iban' AND btrim(value)<>'' AND NOT EXISTS (SELECT 1 FROM guest_event.bank_accounts);
 
+-- Every participant issued in the management console gets a tab automatically.
+ALTER TABLE guest_event.tab_guests ADD COLUMN IF NOT EXISTS ticket_id uuid UNIQUE REFERENCES guest_event.tickets(id) ON DELETE SET NULL;
+-- One-time backfill of existing active, non-demo participants (guarded so a
+-- later re-run does not resurrect tabs the organiser deleted on purpose).
+INSERT INTO guest_event.tab_guests(name,ticket_id)
+SELECT t.name,t.id FROM guest_event.tickets t
+WHERE t.active AND NOT t.is_demo
+ AND NOT EXISTS (SELECT 1 FROM guest_event.settings WHERE key='tab_backfill_done')
+ AND NOT EXISTS (SELECT 1 FROM guest_event.tab_guests g WHERE g.ticket_id=t.id);
+INSERT INTO guest_event.settings(key,value) VALUES ('tab_backfill_done','1') ON CONFLICT DO NOTHING;
+
 REVOKE ALL ON guest_event.tab_guests, guest_event.menu_items, guest_event.tab_lines,
  guest_event.tab_payments, guest_event.tab_audit, guest_event.settings, guest_event.bank_accounts
  FROM PUBLIC, anon, authenticated;

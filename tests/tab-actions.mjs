@@ -14,7 +14,7 @@ async function action(name,args,cookie=''){
 }
 const uuid=body=>body.match(/"id":"([a-f0-9-]{36})"/)?.[1];
 const sql=postgres(process.env.POSTGRES_URL,{ssl:'require',max:1});const hash=x=>createHash('sha256').update(x).digest('hex');
-const tag=randomUUID().slice(0,8);const created={admins:[],guests:[],accounts:[]};
+const tag=randomUUID().slice(0,8);const created={admins:[],guests:[],accounts:[],tickets:[]};
 async function staff(role){
  const [a]=await sql`INSERT INTO guest_event.admins(name,code_hash,role) VALUES(${'TEST '+role+' '+tag},${hash(randomBytes(16).toString('hex'))},${role}) RETURNING id`;
  const token=randomBytes(32).toString('hex');
@@ -38,6 +38,9 @@ try{
  const codeLogin=await fetch(base+'/yonetim',{method:'POST',headers:{'Next-Action':ids.loginAdmin,'Content-Type':'text/plain;charset=UTF-8',Origin:base},body:JSON.stringify([code.toLowerCase(),false])});
  assert.ok(codeLogin.headers.getSetCookie().some(c=>c.startsWith('soul_admin_session=')),'lower-case code with dash signs in');
  const renewed=await action('regenerateStaffCode',[staffId],admin.cookie);const code2=renewed.body.match(/"code":"([A-Z2-9]{3}-[A-Z2-9]{3})"/)?.[1];assert.ok(code2&&code2!==code,'renewal changes the code');
+ // A participant issued in the console opens a tab automatically.
+ const issued=await action('issueGuest',['TEST bilet '+tag,true,randomUUID(),'team'],admin.cookie);const ticketId=uuid(issued.body);assert.ok(ticketId,'ticket issued');created.tickets.push(ticketId);
+ const [autoTab]=await sql`SELECT id,name FROM guest_event.tab_guests WHERE ticket_id=${ticketId}`;assert.equal(autoTab?.name,'TEST bilet '+tag,'issued participant has a tab');created.guests.push(autoTab.id);
  const guest=uuid((await action('addTabGuest',['TEST misafir '+tag],bar.cookie)).body);assert.ok(guest);created.guests.push(guest);
  const [bira]=await sql`SELECT id,name,price FROM guest_event.menu_items WHERE active AND station='bar' ORDER BY sort_order LIMIT 1`;
  const [pizzaItem]=await sql`SELECT id,price FROM guest_event.menu_items WHERE active AND station='pizza' ORDER BY sort_order LIMIT 1`;
@@ -76,6 +79,7 @@ try{
 }finally{
  for(const g of created.guests)await sql`DELETE FROM guest_event.tab_guests WHERE id=${g}`;
  for(const a of created.accounts)await sql`DELETE FROM guest_event.bank_accounts WHERE id=${a}`;
+ for(const t of created.tickets)await sql`DELETE FROM guest_event.tickets WHERE id=${t}`;
  await sql`DELETE FROM guest_event.tab_audit WHERE actor_id=ANY(${created.admins}::uuid[])`;
  for(const a of created.admins)await sql`DELETE FROM guest_event.admins WHERE id=${a}`;
  await sql.end();
