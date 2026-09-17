@@ -38,17 +38,20 @@ export const lineDiscount = (
 export function guestTotals(
   lines: Pick<
     TabLine,
-    "guestId" | "price" | "qty" | "complimentary" | "discountPercent"
+    "guestId" | "price" | "qty" | "complimentary" | "discountPercent" | "round"
   >[],
-  payments: Pick<TabPayment, "guestId" | "amount">[],
+  payments: Pick<TabPayment, "guestId" | "amount" | "round">[],
   guestId: string,
+  /** Limit to one round (the current one, or a past one for history). */
+  round?: number,
 ): Totals {
   let subtotal = 0;
   let complimentary = 0;
   let discount = 0;
   let count = 0;
+  const inRound = (r: number) => round === undefined || r === round;
   for (const line of lines)
-    if (line.guestId === guestId) {
+    if (line.guestId === guestId && inRound(line.round)) {
       if (line.complimentary) complimentary += line.price * line.qty;
       else {
         subtotal += line.price * line.qty;
@@ -59,7 +62,8 @@ export function guestTotals(
   const total = subtotal - discount;
   let paid = 0;
   for (const payment of payments)
-    if (payment.guestId === guestId) paid += payment.amount;
+    if (payment.guestId === guestId && inRound(payment.round))
+      paid += payment.amount;
   return {
     subtotal,
     complimentary,
@@ -275,7 +279,7 @@ export function summarize(
     .map((g) => ({
       id: g.id,
       name: g.name,
-      due: guestTotals(data.lines, data.payments, g.id).due,
+      due: guestTotals(data.lines, data.payments, g.id, g.round).due,
     }))
     .filter((g) => g.due > 0)
     .sort((a, b) => b.due - a.due || a.name.localeCompare(b.name, "tr"));
@@ -395,22 +399,63 @@ export function buildCsv(
   return rows.map((row) => row.map(csvCell).join(";")).join("\r\n") + "\r\n";
 }
 
-export type GuestRow = TabGuest & Totals;
+export type GuestRow = TabGuest & Totals & { active: boolean };
 
+/** A tab counts as opened once something was entered in its current round. */
+export const hasActivity = (t: Pick<Totals, "count" | "paid">) =>
+  t.count > 0 || t.paid > 0;
+
+/**
+ * "Açık": open tabs with activity. "Kapalı": closed tabs. "Hepsi": everyone,
+ * including guests whose tab was never opened. A search always looks through
+ * everyone so a new tab can be opened from the list.
+ */
 export function guestRows(
   data: Pick<TabData, "guests" | "lines" | "payments">,
   filter: "open" | "all" | "closed",
   query: string,
 ): GuestRow[] {
+  const rows = data.guests.map((g) => {
+    const totals = guestTotals(data.lines, data.payments, g.id, g.round);
+    return { ...g, ...totals, active: hasActivity(totals) };
+  });
+  const searching = query.trim().length > 0;
   return sortByName(
-    data.guests
-      .filter(
-        (g) =>
-          (filter === "all" || g.status === filter) &&
-          matchesSearch(g.name, query),
-      )
-      .map((g) => ({ ...g, ...guestTotals(data.lines, data.payments, g.id) })),
+    rows.filter((g) => {
+      if (searching) return matchesSearch(g.name, query);
+      if (filter === "open") return g.status === "open" && g.active;
+      if (filter === "closed") return g.status === "closed";
+      return true;
+    }),
   );
+}
+
+/** Closed rounds before the current one, newest first. */
+export function pastRounds(
+  data: Pick<TabData, "lines" | "payments">,
+  guest: Pick<TabGuest, "id" | "round">,
+) {
+  const rounds: number[] = [];
+  for (let r = guest.round - 1; r >= 1; r--) rounds.push(r);
+  return rounds
+    .map((round) => {
+      const lines = data.lines.filter(
+        (l) => l.guestId === guest.id && l.round === round,
+      );
+      const payments = data.payments.filter(
+        (p) => p.guestId === guest.id && p.round === round,
+      );
+      const times = [...lines, ...payments].map((x) => x.createdAt).sort();
+      return {
+        round,
+        lines,
+        payments,
+        totals: guestTotals(data.lines, data.payments, guest.id, round),
+        from: times[0] ?? null,
+        to: times[times.length - 1] ?? null,
+      };
+    })
+    .filter((r) => r.lines.length || r.payments.length);
 }
 
 export const visibleMenu = (
@@ -447,11 +492,16 @@ export function describeAudit(entry: Pick<AuditEntry, "action" | "record" | "gue
 export function openSummary(
   data: Pick<TabData, "guests" | "lines" | "payments">,
 ) {
-  const open = data.guests.filter((g) => g.status === "open");
+  let open = 0;
   let due = 0;
-  for (const g of open)
-    due += Math.max(0, guestTotals(data.lines, data.payments, g.id).due);
-  return { open: open.length, due };
+  for (const g of data.guests) {
+    if (g.status !== "open") continue;
+    const t = guestTotals(data.lines, data.payments, g.id, g.round);
+    if (!hasActivity(t)) continue;
+    open += 1;
+    due += Math.max(0, t.due);
+  }
+  return { open, due };
 }
 
 /** Message a guest can settle later: name, balance and the IBAN text. */

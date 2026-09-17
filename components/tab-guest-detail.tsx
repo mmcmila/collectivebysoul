@@ -20,6 +20,7 @@ import {
   formatTime,
   guestTotals,
   parseAmount,
+  pastRounds,
   statusAfterPayment,
   statusAfterPaymentRemoved,
   visibleMenu,
@@ -72,10 +73,15 @@ export function TabGuestDetail({
     activeAccounts.find((a) => a.id === chosenAccount) ?? activeAccounts[0] ?? null;
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
-  const totals = guestTotals(data.lines, data.payments, guest.id);
+  const totals = guestTotals(data.lines, data.payments, guest.id, guest.round);
   const [discountInput, setDiscountInput] = useState("");
-  const lines = data.lines.filter((l) => l.guestId === guest.id);
-  const payments = data.payments.filter((p) => p.guestId === guest.id);
+  const lines = data.lines.filter(
+    (l) => l.guestId === guest.id && l.round === guest.round,
+  );
+  const payments = data.payments.filter(
+    (p) => p.guestId === guest.id && p.round === guest.round,
+  );
+  const history = pastRounds(data, guest);
   const menu = visibleMenu(data.menu, station, allMenu);
   const isAdmin = user.role === "admin";
 
@@ -97,6 +103,7 @@ export function TabGuestDetail({
       station: item.station,
       complimentary: false,
       discountPercent: guest.discountPercent,
+      round: guest.round,
       createdBy: user.id,
       createdByName: user.name,
       createdAt: new Date().toISOString(),
@@ -168,6 +175,7 @@ export function TabGuestDetail({
       method,
       accountId: method === "iban" ? account?.id ?? null : null,
       accountLabel: method === "iban" ? account?.label ?? null : null,
+      round: guest.round,
       createdBy: user.id,
       createdByName: user.name,
       createdAt: new Date().toISOString(),
@@ -367,6 +375,9 @@ export function TabGuestDetail({
       <div className="tab-detail-head">
         <h1 id="tab-guest-title" className="tab-title">
           {guest.name}
+          {guest.round > 1 && (
+            <small className="tab-round-badge">{guest.round}. hesap</small>
+          )}
         </h1>
         <span className={`ad-badge ${open ? "pending" : "done"}`}>
           {open ? "Açık" : "Kapalı"}
@@ -674,6 +685,78 @@ export function TabGuestDetail({
         )}
       </section>
 
+      {history.length > 0 && (
+        <section className="tab-card tab-history" aria-labelledby="tab-history-title">
+          <h2 id="tab-history-title">Geçmiş hesaplar</h2>
+          <p className="ad-note">
+            Bu misafirin daha önce kapatılmış hesapları. Değiştirilemez; Özet
+            ve CSV’ye dahildir.
+          </p>
+          {history.map((h) => (
+            <details key={h.round} className="tab-round">
+              <summary>
+                <span>
+                  <strong>{h.round}. hesap</strong>
+                  {h.from && (
+                    <small>
+                      {" "}
+                      · {formatTime(h.from)}
+                      {h.to && h.to !== h.from && `–${formatTime(h.to)}`}
+                    </small>
+                  )}
+                </span>
+                <span className="tab-round-sum">
+                  {formatMoney(h.totals.total)} ·{" "}
+                  {h.payments.length
+                    ? [...new Set(h.payments.map((p) => paymentMethods[p.method] + (p.accountLabel ? ` ${p.accountLabel}` : "")))].join(", ")
+                    : "ödeme yok"}
+                </span>
+              </summary>
+              <ul className="tab-lines">
+                {h.lines.map((line) => (
+                  <li key={line.id} className={line.complimentary ? "comp" : ""}>
+                    <span className="tab-line-main">
+                      <span className="tab-line-name">
+                        {line.name}
+                        {line.qty > 1 && ` ×${line.qty}`}
+                        {line.complimentary && <span className="tab-flag comp">İkram</span>}
+                        {line.discountPercent > 0 && !line.complimentary && (
+                          <span className="tab-flag discount">%{line.discountPercent}</span>
+                        )}
+                      </span>
+                      <span className="tab-line-sub">
+                        {stations[line.station]} · {formatTime(line.createdAt)}
+                      </span>
+                    </span>
+                    <span className="tab-line-amount">
+                      {formatMoney(line.complimentary ? 0 : line.price * line.qty)}
+                    </span>
+                  </li>
+                ))}
+                {h.payments.map((p) => (
+                  <li key={p.id} className="tab-round-payment">
+                    <span className="tab-line-main">
+                      <span className="tab-line-name">
+                        Ödeme · {paymentMethods[p.method]}
+                        {p.accountLabel && ` · ${p.accountLabel}`}
+                      </span>
+                      <span className="tab-line-sub">{formatTime(p.createdAt)}</span>
+                    </span>
+                    <span className="tab-line-amount">{formatMoney(p.amount)}</span>
+                  </li>
+                ))}
+              </ul>
+              {(h.totals.discount > 0 || h.totals.complimentary > 0) && (
+                <p className="ad-note">
+                  {h.totals.discount > 0 && `−${formatMoney(h.totals.discount)} indirim`}
+                  {h.totals.discount > 0 && h.totals.complimentary > 0 && " · "}
+                  {h.totals.complimentary > 0 && `${formatMoney(h.totals.complimentary)} ikram`}
+                </p>
+              )}
+            </details>
+          ))}
+        </section>
+      )}
       {isAdmin && (
         <section className="tab-card" aria-labelledby="tab-discount-title">
           <h2 id="tab-discount-title">İndirim</h2>

@@ -772,3 +772,44 @@
     grid-column: 1 / -1;
   }
 }
+
+.tab-round-badge {
+  display: block;
+  font:
+    13px var(--font-poppins),
+    sans-serif;
+  color: #7b836c;
+  margin-top: 4px;
+}
+.tab-round {
+  border-top: 1px solid #e8e9df;
+  padding: 6px 0;
+}
+.tab-round summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  min-height: 48px;
+  cursor: pointer;
+  list-style: none;
+}
+.tab-round summary::-webkit-details-marker {
+  display: none;
+}
+.tab-round summary small {
+  color: #7b836c;
+}
+.tab-round-sum {
+  font-size: 13px;
+  color: #657454;
+  text-align: right;
+}
+.tab-round .tab-lines li {
+  min-height: 44px;
+  padding: 6px 0;
+  opacity: 0.85;
+}
+.tab-round-payment .tab-line-amount {
+  color: #435431;
+}

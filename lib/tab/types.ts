@@ -37,6 +37,8 @@ export type TabGuest = {
   pendingMethod: "iban" | null;
   pendingAccountId: string | null;
   pendingAccountLabel: string | null;
+  /** Current tab round; earlier rounds are closed history on the same profile. */
+  round: number;
   createdAt: string;
 };
 
@@ -95,6 +97,7 @@ export type TabLine = {
   complimentary: boolean;
   /** Discount in force when the line was added; later changes do not touch it. */
   discountPercent: number;
+  round: number;
   createdBy: string | null;
   createdByName: string;
   createdAt: string;
@@ -108,6 +111,7 @@ export type TabPayment = {
   /** Which IBAN the guest paid to; only for method "iban". */
   accountId: string | null;
   accountLabel: string | null;
+  round: number;
   createdBy: string | null;
   createdByName: string;
   createdAt: string;

@@ -19,13 +19,13 @@ export async function loadTabData(user: StaffUser): Promise<TabData> {
   // pooler stalls when this app opens several connections at once, and
   // each query is small (~150 ms), so sequential is both safe and fast.
   const guests =
-    await sql`SELECT g.id,g.name,g.status,g.created_at,g.discount_percent,g.pending_method,g.pending_account_id,b.label AS pending_account_label,t.category FROM guest_event.tab_guests g LEFT JOIN guest_event.tickets t ON t.id=g.ticket_id LEFT JOIN guest_event.bank_accounts b ON b.id=g.pending_account_id ORDER BY g.name`;
+    await sql`SELECT g.id,g.name,g.status,g.created_at,g.round,g.discount_percent,g.pending_method,g.pending_account_id,b.label AS pending_account_label,t.category FROM guest_event.tab_guests g LEFT JOIN guest_event.tickets t ON t.id=g.ticket_id LEFT JOIN guest_event.bank_accounts b ON b.id=g.pending_account_id ORDER BY g.name`;
   const menu =
     await sql`SELECT id,name,price,station,active,sort_order FROM guest_event.menu_items ORDER BY sort_order,name`;
   const lines =
-    await sql`SELECT l.id,l.guest_id,l.menu_item_id,l.name,l.price,l.qty,l.station,l.complimentary,l.discount_percent,l.created_by,COALESCE(a.name,'') AS created_by_name,l.created_at FROM guest_event.tab_lines l LEFT JOIN guest_event.admins a ON a.id=l.created_by ORDER BY l.created_at DESC`;
+    await sql`SELECT l.id,l.guest_id,l.menu_item_id,l.name,l.price,l.qty,l.station,l.complimentary,l.discount_percent,l.round,l.created_by,COALESCE(a.name,'') AS created_by_name,l.created_at FROM guest_event.tab_lines l LEFT JOIN guest_event.admins a ON a.id=l.created_by ORDER BY l.created_at DESC`;
   const payments =
-    await sql`SELECT p.id,p.guest_id,p.amount,p.method,p.bank_account_id,b.label AS account_label,p.created_by,COALESCE(a.name,'') AS created_by_name,p.created_at FROM guest_event.tab_payments p LEFT JOIN guest_event.admins a ON a.id=p.created_by LEFT JOIN guest_event.bank_accounts b ON b.id=p.bank_account_id ORDER BY p.created_at`;
+    await sql`SELECT p.id,p.guest_id,p.amount,p.method,p.bank_account_id,b.label AS account_label,p.round,p.created_by,COALESCE(a.name,'') AS created_by_name,p.created_at FROM guest_event.tab_payments p LEFT JOIN guest_event.admins a ON a.id=p.created_by LEFT JOIN guest_event.bank_accounts b ON b.id=p.bank_account_id ORDER BY p.created_at`;
   const accounts =
     await sql`SELECT id,label,iban,active,sort_order FROM guest_event.bank_accounts ORDER BY sort_order,label`;
   const ruleRows =
@@ -66,6 +66,7 @@ export async function loadTabData(user: StaffUser): Promise<TabData> {
         pendingMethod: g.pending_method,
         pendingAccountId: g.pending_account_id,
         pendingAccountLabel: g.pending_account_label,
+        round: g.round,
         createdAt: g.created_at.toISOString(),
       };
     }),
@@ -90,6 +91,7 @@ export async function loadTabData(user: StaffUser): Promise<TabData> {
         station: l.station,
         complimentary: l.complimentary,
         discountPercent: l.discount_percent,
+        round: l.round,
         createdBy: l.created_by,
         createdByName: l.created_by_name,
         createdAt: l.created_at.toISOString(),
@@ -103,6 +105,7 @@ export async function loadTabData(user: StaffUser): Promise<TabData> {
         method: p.method,
         accountId: p.bank_account_id,
         accountLabel: p.account_label,
+        round: p.round,
         createdBy: p.created_by,
         createdByName: p.created_by_name,
         createdAt: p.created_at.toISOString(),

@@ -14,6 +14,7 @@ import {
   matchesSearch,
   openSummary,
   parseAmount,
+  pastRounds,
   resolvePaymentAmount,
   statusAfterLine,
   statusAfterPayment,
@@ -22,21 +23,21 @@ import {
 } from "../lib/tab/calc.ts";
 
 const lines = [
-  { id: "l1", guestId: "a", menuItemId: null, name: "Bira", price: 20000, qty: 2, station: "bar", complimentary: false, discountPercent: 0, createdBy: "u-bar", createdByName: "Bar", createdAt: "2026-09-19T18:05:00.000Z" },
-  { id: "l2", guestId: "a", menuItemId: null, name: "Pizza dilim", price: 25000, qty: 1, station: "pizza", complimentary: false, discountPercent: 0, createdBy: "u-pizza", createdByName: "Pizza", createdAt: "2026-09-19T18:10:00.000Z" },
-  { id: "l3", guestId: "b", menuItemId: null, name: "Kokteyl", price: 40000, qty: 1, station: "bar", complimentary: false, discountPercent: 0, createdBy: "u-bar", createdByName: "Bar", createdAt: "2026-09-19T18:20:00.000Z" },
+  { id: "l1", guestId: "a", menuItemId: null, name: "Bira", price: 20000, qty: 2, station: "bar", complimentary: false, discountPercent: 0, round: 1, createdBy: "u-bar", createdByName: "Bar", createdAt: "2026-09-19T18:05:00.000Z" },
+  { id: "l2", guestId: "a", menuItemId: null, name: "Pizza dilim", price: 25000, qty: 1, station: "pizza", complimentary: false, discountPercent: 0, round: 1, createdBy: "u-pizza", createdByName: "Pizza", createdAt: "2026-09-19T18:10:00.000Z" },
+  { id: "l3", guestId: "b", menuItemId: null, name: "Kokteyl", price: 40000, qty: 1, station: "bar", complimentary: false, discountPercent: 0, round: 1, createdBy: "u-bar", createdByName: "Bar", createdAt: "2026-09-19T18:20:00.000Z" },
 ];
 const payments = [
-  { id: "p1", guestId: "a", amount: 30000, method: "cash", accountId: null, accountLabel: null, createdBy: "u-bar", createdByName: "Bar", createdAt: "2026-09-19T19:00:00.000Z" },
-  { id: "p2", guestId: "b", amount: 40000, method: "iban", accountId: "acc-1", accountLabel: "Merve", createdBy: "u-bar", createdByName: "Bar", createdAt: "2026-09-19T19:30:00.000Z" },
+  { id: "p1", guestId: "a", amount: 30000, method: "cash", accountId: null, accountLabel: null, round: 1, createdBy: "u-bar", createdByName: "Bar", createdAt: "2026-09-19T19:00:00.000Z" },
+  { id: "p2", guestId: "b", amount: 40000, method: "iban", accountId: "acc-1", accountLabel: "Merve", round: 1, createdBy: "u-bar", createdByName: "Bar", createdAt: "2026-09-19T19:30:00.000Z" },
 ];
 const accounts = [
   { id: "acc-1", label: "Merve", iban: "TR00 1", active: true, sortOrder: 1 },
   { id: "acc-2", label: "Can", iban: "TR00 2", active: true, sortOrder: 2 },
 ];
 const guests = [
-  { id: "a", name: "Şule Çınar", status: "open", category: "paid", discountOverride: null, discountPercent: 0, discountSource: null, pendingMethod: null, pendingAccountId: null, pendingAccountLabel: null, createdAt: "2026-09-19T17:00:00.000Z" },
-  { id: "b", name: "Ali Işık", status: "closed", category: null, discountOverride: null, discountPercent: 0, discountSource: null, pendingMethod: null, pendingAccountId: null, pendingAccountLabel: null, createdAt: "2026-09-19T17:00:00.000Z" },
+  { id: "a", name: "Şule Çınar", status: "open", category: "paid", discountOverride: null, discountPercent: 0, discountSource: null, pendingMethod: null, pendingAccountId: null, pendingAccountLabel: null, round: 1, createdAt: "2026-09-19T17:00:00.000Z" },
+  { id: "b", name: "Ali Işık", status: "closed", category: null, discountOverride: null, discountPercent: 0, discountSource: null, pendingMethod: null, pendingAccountId: null, pendingAccountLabel: null, round: 1, createdAt: "2026-09-19T17:00:00.000Z" },
 ];
 
 test("total, paid and due are derived from lines and payments", () => {
@@ -50,7 +51,7 @@ test("per-line discounts and complimentary lines reduce what is owed", () => {
   const withComp = [
     { ...lines[0], discountPercent: 20 },
     lines[1],
-    { id: "l4", guestId: "a", menuItemId: null, name: "Shot", price: 20000, qty: 1, station: "bar", complimentary: true, discountPercent: 20, createdBy: "u-bar", createdByName: "Bar", createdAt: "2026-09-19T18:30:00.000Z" },
+    { id: "l4", guestId: "a", menuItemId: null, name: "Shot", price: 20000, qty: 1, station: "bar", complimentary: true, discountPercent: 20, round: 1, createdBy: "u-bar", createdByName: "Bar", createdAt: "2026-09-19T18:30:00.000Z" },
     lines[2],
   ];
   const t = guestTotals(withComp, payments, "a");
@@ -131,12 +132,31 @@ test("search ignores case and Turkish diacritics", () => {
   assert.ok(matchesSearch("Ali Işık", ""));
 });
 
-test("guest rows filter by status and sort alphabetically with totals", () => {
-  const data = { guests, lines, payments };
-  assert.deepEqual(guestRows(data, "all", "").map((g) => g.name), ["Ali Işık", "Şule Çınar"]);
-  assert.deepEqual(guestRows(data, "open", "").map((g) => g.id), ["a"]);
+test("guest rows: Açık shows only opened tabs, Hepsi everyone, search looks through everyone", () => {
+  const idle = { ...guests[0], id: "c", name: "Zeynep Boş" };
+  const data = { guests: [...guests, idle], lines, payments };
+  assert.deepEqual(guestRows(data, "all", "").map((g) => g.name), ["Ali Işık", "Şule Çınar", "Zeynep Boş"]);
+  assert.deepEqual(guestRows(data, "open", "").map((g) => g.id), ["a"], "a guest without any line or payment is not an open tab");
   assert.deepEqual(guestRows(data, "closed", "").map((g) => g.id), ["b"]);
+  assert.deepEqual(guestRows(data, "open", "zeynep").map((g) => g.id), ["c"], "search ignores the filter");
   assert.equal(guestRows(data, "all", "sule")[0].due, 35000);
+  assert.equal(guestRows(data, "all", "").find((g) => g.id === "c").active, false);
+});
+
+test("rounds: totals follow the current round and closed rounds become history", () => {
+  const reopened = { ...guests[1], status: "open", round: 2 };
+  const round2Lines = [...lines, { ...lines[2], id: "l9", round: 2, createdAt: "2026-09-19T22:00:00.000Z" }];
+  const t = guestTotals(round2Lines, payments, "b", 2);
+  assert.equal(t.total, 40000);
+  assert.equal(t.paid, 0, "the earlier round's payment does not count for the new round");
+  assert.equal(t.due, 40000);
+  const history = pastRounds({ lines: round2Lines, payments }, reopened);
+  assert.equal(history.length, 1);
+  assert.equal(history[0].round, 1);
+  assert.equal(history[0].totals.paid, 40000);
+  assert.equal(history[0].lines.length, 1);
+  assert.equal(guestTotals(round2Lines, payments, "b").total, 80000, "without a round, all rounds are summed (summary/CSV)");
+  assert.deepEqual(openSummary({ guests: [guests[0], reopened], lines: round2Lines, payments }), { open: 2, due: 75000 });
 });
 
 test("only the person who entered a record or an admin may delete it", () => {
@@ -187,9 +207,9 @@ test("CSV uses semicolons, decimal commas, and one row per line and payment", ()
   assert.ok(quoted.includes('"A ""B""; C"'));
 });
 
-test("open summary counts open tabs and the balance still owed", () => {
+test("open summary counts opened tabs only and the balance still owed", () => {
   assert.deepEqual(openSummary({ guests, lines, payments }), { open: 1, due: 35000 });
-  assert.deepEqual(openSummary({ guests: [], lines: [], payments: [] }), { open: 0, due: 0 });
+  assert.deepEqual(openSummary({ guests: [{ ...guests[0], id: "idle", name: "Boş" }], lines: [], payments: [] }), { open: 0, due: 0 });
 });
 
 test("deletion log entries read as short Turkish sentences", () => {

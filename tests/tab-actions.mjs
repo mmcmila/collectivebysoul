@@ -90,11 +90,15 @@ try{
  const paid=await sql`SELECT sum(amount)::int AS s FROM guest_event.tab_payments WHERE guest_id=${guest}`;assert.equal(paid[0].s,Math.round(total*1.5));
  assert.ok((await action('addTabPayment',[guest,null,'cash'],bar.cookie)).body.includes('kalan borç yok'));
  const reopened=await action('addTabLine',[guest,bira.id],bar.cookie);assert.ok(reopened.body.includes('"status":"open"'),'adding to a closed tab reopens it');
- const [status]=await sql`SELECT status FROM guest_event.tab_guests WHERE id=${guest}`;assert.equal(status.status,'open');
- await action('addTabPayment',[guest,null,'cash'],bar.cookie);
- const ibanPayment=uuid(rest.body);assert.ok((await action('deleteTabPayment',[ibanPayment],bar.cookie)).body.includes('Sadece ödemeyi alan'));
- assert.ok((await action('deleteTabPayment',[ibanPayment],pizza.cookie)).body.includes('"ok":true'));
- const [after]=await sql`SELECT status FROM guest_event.tab_guests WHERE id=${guest}`;assert.equal(after.status,'open','removing a payment that leaves a balance reopens the tab');
+ const [status]=await sql`SELECT status,round FROM guest_event.tab_guests WHERE id=${guest}`;assert.equal(status.status,'open');assert.equal(status.round,2,'reopening starts a new round on the same guest');
+ assert.ok(reopened.body.includes('"round":2'),'the new line belongs to round 2');
+ assert.ok((await action('deleteTabLine',[line5],admin.cookie)).body.includes('eski hesaba ait'),'lines of a closed round cannot be changed');
+ const ibanPayment=uuid(rest.body);assert.ok((await action('deleteTabPayment',[ibanPayment],pizza.cookie)).body.includes('eski hesaba ait'),'payments of a closed round cannot be changed');
+ // Current round: close with cash; only the payer or an admin may delete it, and deleting it reopens the tab.
+ const closing=await action('addTabPayment',[guest,null,'cash',null,true],bar.cookie);assert.ok(closing.body.includes('"status":"closed"'));
+ const cashPayment=uuid(closing.body);assert.ok((await action('deleteTabPayment',[cashPayment],pizza.cookie)).body.includes('Sadece ödemeyi alan'));
+ assert.ok((await action('deleteTabPayment',[cashPayment],bar.cookie)).body.includes('"ok":true'));
+ const [after]=await sql`SELECT status,round FROM guest_event.tab_guests WHERE id=${guest}`;assert.equal(after.status,'open','removing a payment that leaves a balance reopens the tab');assert.equal(after.round,2,'reopening by payment removal stays in the same round');
  assert.ok((await action('deleteTabGuest',[guest],admin.cookie)).body.includes('"ok":true'));
  const [gone]=await sql`SELECT count(*)::int AS n FROM guest_event.tab_lines WHERE guest_id=${guest}`;assert.equal(gone.n,0);
  console.log('PASS: anonymous denied, bar/pizza limited to the module, admin-only settings, readable staff codes (create/list/login/renew), new row per add with price snapshot, owner/admin deletion with audit log, close/reopen rules.');
