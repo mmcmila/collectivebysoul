@@ -1,5 +1,6 @@
 import type {
   AuditEntry,
+  BankAccount,
   MenuItem,
   PaymentMethod,
   StaffRole,
@@ -144,30 +145,68 @@ export type Summary = {
   due: number;
   byMethod: Record<PaymentMethod, number>;
   byStation: Record<Station, number>;
-  byItem: { name: string; qty: number; amount: number }[];
+  /** Sorted by quantity sold, then amount. */
+  byItem: { name: string; qty: number; amount: number; station: Station }[];
+  /** IBAN receipts per account, including inactive accounts that received money. */
+  byAccount: { id: string; label: string; iban: string; amount: number; count: number }[];
   debtors: { id: string; name: string; due: number }[];
 };
 
 export function summarize(
-  data: Pick<TabData, "guests" | "lines" | "payments">,
+  data: Pick<TabData, "guests" | "lines" | "payments"> & {
+    accounts?: BankAccount[];
+  },
 ): Summary {
-  const byMethod: Record<PaymentMethod, number> = { cash: 0, iban: 0 };
+  const byMethod: Record<PaymentMethod, number> = { cash: 0, iban: 0, pos: 0 };
   const byStation: Record<Station, number> = { bar: 0, pizza: 0 };
-  const items = new Map<string, { name: string; qty: number; amount: number }>();
+  const items = new Map<
+    string,
+    { name: string; qty: number; amount: number; station: Station }
+  >();
   let total = 0;
   for (const line of data.lines) {
     const amount = line.price * line.qty;
     total += amount;
     byStation[line.station] += amount;
-    const item = items.get(line.name) ?? { name: line.name, qty: 0, amount: 0 };
+    const item = items.get(line.name) ?? {
+      name: line.name,
+      qty: 0,
+      amount: 0,
+      station: line.station,
+    };
     item.qty += line.qty;
     item.amount += amount;
     items.set(line.name, item);
   }
   let paid = 0;
+  const accounts = new Map<
+    string,
+    { id: string; label: string; iban: string; amount: number; count: number }
+  >();
+  for (const account of data.accounts ?? [])
+    accounts.set(account.id, {
+      id: account.id,
+      label: account.label,
+      iban: account.iban,
+      amount: 0,
+      count: 0,
+    });
   for (const payment of data.payments) {
     paid += payment.amount;
     byMethod[payment.method] += payment.amount;
+    if (payment.method === "iban") {
+      const key = payment.accountId ?? "unknown";
+      const account = accounts.get(key) ?? {
+        id: key,
+        label: payment.accountLabel ?? "Hesap belirtilmemiş",
+        iban: "",
+        amount: 0,
+        count: 0,
+      };
+      account.amount += payment.amount;
+      account.count += 1;
+      accounts.set(key, account);
+    }
   }
   const debtors = data.guests
     .map((g) => ({
@@ -184,8 +223,12 @@ export function summarize(
     byMethod,
     byStation,
     byItem: [...items.values()].sort(
-      (a, b) => b.amount - a.amount || a.name.localeCompare(b.name, "tr"),
+      (a, b) =>
+        b.qty - a.qty ||
+        b.amount - a.amount ||
+        a.name.localeCompare(b.name, "tr"),
     ),
+    byAccount: [...accounts.values()].sort((a, b) => b.amount - a.amount),
     debtors,
   };
 }
@@ -224,6 +267,7 @@ export function buildCsv(
       "fiyat",
       "tutar",
       "istasyon_veya_yontem",
+      "iban_hesabi",
       "kullanici",
       "zaman",
     ],
@@ -240,6 +284,7 @@ export function buildCsv(
         csvMoney(line.price),
         csvMoney(line.price * line.qty),
         line.station,
+        "",
         line.createdByName,
         csvTime(line.createdAt),
       ],
@@ -255,6 +300,7 @@ export function buildCsv(
         "",
         csvMoney(payment.amount),
         payment.method,
+        payment.accountLabel ?? "",
         payment.createdByName,
         csvTime(payment.createdAt),
       ],
@@ -299,7 +345,7 @@ export function describeAudit(entry: Pick<AuditEntry, "action" | "record" | "gue
   if (entry.action === "line.delete")
     return `${guest}: ${String(r.name ?? "kalem")} ${num("qty") > 1 ? `×${num("qty")} ` : ""}· ${formatMoney(num("price") * (num("qty") || 1))}`;
   if (entry.action === "payment.delete")
-    return `${guest}: ${r.method === "iban" ? "IBAN" : "Nakit"} ödemesi · ${formatMoney(num("amount"))}`;
+    return `${guest}: ${r.method === "iban" ? "IBAN" : r.method === "pos" ? "POS" : "Nakit"} ödemesi · ${formatMoney(num("amount"))}`;
   if (entry.action === "guest.delete") {
     const lines = Array.isArray(r.lines) ? r.lines.length : 0;
     const payments = Array.isArray(r.payments) ? r.payments.length : 0;

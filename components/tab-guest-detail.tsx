@@ -11,7 +11,6 @@ import {
 import type { Notify } from "@/components/tab-module";
 import {
   balanceMessage,
-  canClose,
   canDeleteRecord,
   formatMoney,
   formatTime,
@@ -63,6 +62,10 @@ export function TabGuestDetail({
   const [allMenu, setAllMenu] = useState(false);
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<PaymentMethod>("cash");
+  const activeAccounts = data.accounts.filter((a) => a.active);
+  const [chosenAccount, setChosenAccount] = useState<string | null>(null);
+  const account =
+    activeAccounts.find((a) => a.id === chosenAccount) ?? activeAccounts[0] ?? null;
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const totals = guestTotals(data.lines, data.payments, guest.id);
@@ -135,11 +138,20 @@ export function TabGuestDetail({
     void refresh();
   };
 
-  const takePayment = async () => {
-    const parsed = parseAmount(amount);
+  const takePayment = async (closing = false) => {
+    const parsed = closing ? null : parseAmount(amount);
     if (parsed === undefined) return notify("Tutarı kontrol et.", "error");
     const value = parsed ?? totals.due;
     if (value <= 0) return notify("Bu hesapta kalan borç yok.", "error");
+    if (method === "iban" && !account)
+      return notify("Önce Ayarlar’dan bir IBAN ekle.", "error");
+    if (
+      closing &&
+      !window.confirm(
+        `Kalan ${formatMoney(value)} ${paymentMethods[method]}${method === "iban" && account ? ` (${account.label})` : ""} olarak alınsın ve hesap kapatılsın mı?`,
+      )
+    )
+      return;
     const id = tempId();
     const previous = guest.status;
     const temp: TabPayment = {
@@ -147,6 +159,8 @@ export function TabGuestDetail({
       guestId: guest.id,
       amount: value,
       method,
+      accountId: method === "iban" ? account?.id ?? null : null,
+      accountLabel: method === "iban" ? account?.label ?? null : null,
       createdBy: user.id,
       createdByName: user.name,
       createdAt: new Date().toISOString(),
@@ -159,7 +173,12 @@ export function TabGuestDetail({
       ),
     );
     setAmount("");
-    const r = await addTabPayment(guest.id, parsed, method).catch(
+    const r = await addTabPayment(
+      guest.id,
+      parsed,
+      method,
+      method === "iban" ? (account?.id ?? null) : null,
+    ).catch(
       (): Result => ({ error: OFFLINE }),
     );
     setBusy(false);
@@ -183,7 +202,7 @@ export function TabGuestDetail({
       ),
     );
     notify(
-      `Ödeme alındı: ${formatMoney(r.payment.amount)} · ${paymentMethods[method]}`,
+      `${closing ? "Hesap kapatıldı" : "Ödeme alındı"}: ${formatMoney(r.payment.amount)} · ${paymentMethods[method]}${r.payment.accountLabel ? ` · ${r.payment.accountLabel}` : ""}`,
     );
     void refresh();
   };
@@ -216,7 +235,11 @@ export function TabGuestDetail({
     void refresh();
   };
 
+  // "Hesabı kapat": with a balance left, the remaining amount is taken with
+  // the chosen method (Nakit / IBAN / POS) and the tab closes; otherwise the
+  // tab simply closes.
   const closeTab = async () => {
+    if (totals.due > 0) return takePayment(true);
     setBusy(true);
     mutate((d) => setStatus(d, "closed"));
     const r = await closeTabGuest(guest.id).catch(
@@ -259,9 +282,10 @@ export function TabGuestDetail({
     void refresh();
   };
 
+  const ibanText = account ? `${account.label} · ${account.iban}` : "";
   const copyIban = async () => {
     try {
-      await navigator.clipboard.writeText(data.iban);
+      await navigator.clipboard.writeText(ibanText);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -271,7 +295,7 @@ export function TabGuestDetail({
   // Guests who pay later get name, balance and IBAN in one message
   // (WhatsApp etc. through the phone's share sheet; clipboard elsewhere).
   const shareBalance = async () => {
-    const text = balanceMessage(guest.name, totals.due, data.iban);
+    const text = balanceMessage(guest.name, totals.due, ibanText);
     try {
       if (navigator.share) await navigator.share({ text });
       else {
@@ -403,6 +427,7 @@ export function TabGuestDetail({
                 <span className="tab-line-main">
                   <span className="tab-line-name">
                     {paymentMethods[p.method]}
+                    {p.accountLabel && ` · ${p.accountLabel}`}
                   </span>
                   <span className="tab-line-sub">
                     {formatTime(p.createdAt)}
@@ -458,6 +483,21 @@ export function TabGuestDetail({
               ))}
             </div>
           </div>
+          {method === "iban" && activeAccounts.length > 1 && (
+            <div className="tab-chips" role="group" aria-label="Hangi IBAN">
+              {activeAccounts.map((a) => (
+                <button
+                  type="button"
+                  key={a.id}
+                  className="tab-chip"
+                  aria-pressed={account?.id === a.id}
+                  onClick={() => setChosenAccount(a.id)}
+                >
+                  {a.label}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="tab-row">
             <button className="ad-primary" disabled={busy}>
               Ödeme al
@@ -465,23 +505,27 @@ export function TabGuestDetail({
             <button
               type="button"
               className="tab-secondary"
-              disabled={busy || !canClose(guest.status, totals.due)}
+              disabled={busy || !open}
               onClick={() => void closeTab()}
             >
-              {open ? "Hesabı kapat" : "Kapalı"}
+              {open
+                ? totals.due > 0
+                  ? `Hesabı kapat · ${formatMoney(totals.due)}`
+                  : "Hesabı kapat"
+                : "Kapalı"}
             </button>
           </div>
           <p className="ad-note">
-            Tutar boş bırakılırsa kalanın tamamı alınır. Kalan sıfırlanınca
-            hesap kendiliğinden kapanır.
+            “Ödeme al” yazılan tutarı, boşsa kalanın tamamını alır. “Hesabı
+            kapat” kalanı seçili yöntemle alır ve hesabı kapatır.
           </p>
         </form>
         {method === "iban" && (
           <div className="tab-iban">
-            <span>Misafire göster</span>
-            {data.iban ? (
+            <span>Misafire göster{account ? ` · ${account.label}` : ""}</span>
+            {account ? (
               <>
-                <p className="tab-iban-text">{data.iban}</p>
+                <p className="tab-iban-text">{account.iban}</p>
                 <div className="tab-row">
                   <button
                     type="button"
