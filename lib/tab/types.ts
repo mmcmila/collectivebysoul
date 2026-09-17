@@ -27,8 +27,12 @@ export type TabGuest = {
   status: TabStatus;
   /** Participant type when the tab was opened from the management console. */
   category: "paid" | "team" | "guest" | null;
-  /** 0–100; applied to the net of complimentary lines. */
+  /** Explicit per-person discount; null = follow the rules in settings. */
+  discountOverride: number | null;
+  /** Discount new lines will get right now (override, else matching rule, else 0). */
   discountPercent: number;
+  /** Where the current discount comes from. */
+  discountSource: "override" | "rule" | null;
   /** "iban": the guest will transfer later, tab stays open. */
   pendingMethod: "iban" | null;
   pendingAccountId: string | null;
@@ -36,7 +40,38 @@ export type TabGuest = {
   createdAt: string;
 };
 
-export const discountOptions = [0, 10, 20, 50, 100] as const;
+export type DiscountRule = {
+  id: string;
+  kind: "category" | "guest";
+  category: "paid" | "team" | "guest" | null;
+  guestId: string | null;
+  guestName: string | null;
+  percent: number;
+  label: string;
+};
+
+export type DiscountRuleDraft = {
+  id: string | null;
+  kind: "category" | "guest";
+  category: "paid" | "team" | "guest" | null;
+  guestId: string | null;
+  percent: number;
+  label: string;
+};
+
+/** Personal override wins, then a personal rule, then the participant-type rule. */
+export function effectiveDiscount(
+  guest: { id: string; category: string | null; discountOverride: number | null },
+  rules: Pick<DiscountRule, "kind" | "category" | "guestId" | "percent" | "label">[],
+): { percent: number; source: "override" | "rule" | null; label: string } {
+  if (guest.discountOverride !== null)
+    return { percent: guest.discountOverride, source: "override", label: "Kişiye özel" };
+  const personal = rules.find((r) => r.kind === "guest" && r.guestId === guest.id);
+  if (personal) return { percent: personal.percent, source: "rule", label: personal.label || "Kişiye özel kural" };
+  const byType = rules.find((r) => r.kind === "category" && r.category === guest.category);
+  if (byType) return { percent: byType.percent, source: "rule", label: byType.label || "Tür kuralı" };
+  return { percent: 0, source: null, label: "" };
+}
 
 /** Prices and amounts are integer kuruş: 250 ₺ = 25000. */
 export type MenuItem = {
@@ -58,6 +93,8 @@ export type TabLine = {
   station: Station;
   /** Given for free; counts as 0 ₺ but stays visible as "İkram". */
   complimentary: boolean;
+  /** Discount in force when the line was added; later changes do not touch it. */
+  discountPercent: number;
   createdBy: string | null;
   createdByName: string;
   createdAt: string;
@@ -120,6 +157,7 @@ export type TabData = {
   lines: TabLine[];
   payments: TabPayment[];
   accounts: BankAccount[];
+  discountRules: DiscountRule[];
   /** Latest deletions; only sent to admins. */
   audit: AuditEntry[];
   fetchedAt: string;

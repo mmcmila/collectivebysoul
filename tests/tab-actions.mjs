@@ -70,15 +70,24 @@ try{
  const [pending]=await sql`SELECT pending_method FROM guest_event.tab_guests WHERE id=${guest}`;assert.equal(pending.pending_method,'iban');
  assert.ok((await action('setGuestDiscount',[guest,50],bar.cookie)).body.includes('yönetici yetkisi'),'discounts are admin only');
  assert.ok((await action('setGuestDiscount',[guest,50],admin.cookie)).body.includes('"ok":true'));
- // Two more biras: one complimentary (0 ₺), one charged. With 50% off: (200+200)/2 = 200 owed, 100 already paid.
+ // Discounts are snapshotted per line: line2 (added before) stays at 0%, new lines get 50%.
  const line4=uuid((await action('addTabLine',[guest,bira.id],bar.cookie)).body);assert.ok((await action('setLineComplimentary',[line4,true],admin.cookie)).body.includes('"ok":true'));
- assert.ok(uuid((await action('addTabLine',[guest,bira.id],bar.cookie)).body));
+ const line5=uuid((await action('addTabLine',[guest,bira.id],bar.cookie)).body);
+ const snap=await sql`SELECT id,discount_percent FROM guest_event.tab_lines WHERE id IN (${line2},${line5})`;
+ assert.equal(snap.find(r=>r.id===line2).discount_percent,0,'earlier line keeps its discount');assert.equal(snap.find(r=>r.id===line5).discount_percent,50,'new line gets the current discount');
+ // Removing the discount afterwards does not change existing lines: still 200 + 100 = 300 owed minus 100 paid.
+ assert.ok((await action('setGuestDiscount',[guest,0],admin.cookie)).body.includes('"ok":true'));
+ // Rules from settings apply to new lines of matching participants.
+ assert.ok((await action('saveDiscountRules',[[{id:null,kind:'category',category:'team',guestId:null,percent:35,label:'TEST ekip'}]],admin.cookie)).body.includes('"ok":true'));
+ const teamLine=uuid((await action('addTabLine',[autoTab.id,bira.id],bar.cookie)).body);const [teamSnap]=await sql`SELECT discount_percent FROM guest_event.tab_lines WHERE id=${teamLine}`;assert.equal(teamSnap.discount_percent,35,'team rule applies to a team participant');
+ assert.ok((await action('saveDiscountRules',[[]],admin.cookie)).body.includes('"ok":true'));
+ const [teamAfter]=await sql`SELECT discount_percent FROM guest_event.tab_lines WHERE id=${teamLine}`;assert.equal(teamAfter.discount_percent,35,'deleting the rule keeps the earlier line discounted');
  assert.ok((await action('addTabPayment',[guest,50,'cash',null,true],bar.cookie)).body.includes('kalanı kapatmıyor'),'closing with a partial amount is refused');
  const rest=await action('addTabPayment',[guest,null,'iban',accountRow.id,true],pizza.cookie);assert.ok(rest.body.includes('"status":"closed"'),'paying the balance closes the tab');
- const [cleared]=await sql`SELECT pending_method,discount_percent FROM guest_event.tab_guests WHERE id=${guest}`;assert.equal(cleared.pending_method,null,'a recorded payment clears the IBAN-pending state');assert.equal(cleared.discount_percent,50);assert.ok(rest.body.includes('TEST hesap '+tag),'payment carries the account label');
+ const [cleared]=await sql`SELECT pending_method,discount_percent FROM guest_event.tab_guests WHERE id=${guest}`;assert.equal(cleared.pending_method,null,'a recorded payment clears the IBAN-pending state');assert.equal(cleared.discount_percent,0);assert.ok(rest.body.includes('TEST hesap '+tag),'payment carries the account label');
  const [stored]=await sql`SELECT bank_account_id FROM guest_event.tab_payments WHERE guest_id=${guest} AND method='iban'`;assert.equal(stored.bank_account_id,accountRow.id);
- // Charged lines: two biras at 50% off = one bira; complimentary bira costs nothing.
- const paid=await sql`SELECT sum(amount)::int AS s FROM guest_event.tab_payments WHERE guest_id=${guest}`;assert.equal(paid[0].s,total);
+ // Charged: line2 at 0% (200) + line5 at 50% (100) = 300; complimentary line4 costs nothing.
+ const paid=await sql`SELECT sum(amount)::int AS s FROM guest_event.tab_payments WHERE guest_id=${guest}`;assert.equal(paid[0].s,Math.round(total*1.5));
  assert.ok((await action('addTabPayment',[guest,null,'cash'],bar.cookie)).body.includes('kalan borç yok'));
  const reopened=await action('addTabLine',[guest,bira.id],bar.cookie);assert.ok(reopened.body.includes('"status":"open"'),'adding to a closed tab reopens it');
  const [status]=await sql`SELECT status FROM guest_event.tab_guests WHERE id=${guest}`;assert.equal(status.status,'open');

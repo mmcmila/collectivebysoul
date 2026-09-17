@@ -15,10 +15,12 @@ import {
 } from "@/lib/tab/calc";
 import { loadTabData } from "@/lib/tab/data";
 import {
+  effectiveDiscount,
   isPaymentMethod,
   isStaffRole,
   isStation,
   type BankAccountDraft,
+  type DiscountRuleDraft,
   type MenuDraftItem,
   type StaffAccount,
   type StaffRole,
@@ -55,22 +57,37 @@ type Tx = postgres.TransactionSql;
 /** Locks the guest row so balance checks and status changes are serialised per guest. */
 async function lockGuest(tx: Tx, guestId: string) {
   const [guest] =
-    await tx`SELECT id,name,status,discount_percent FROM guest_event.tab_guests WHERE id=${guestId} FOR UPDATE`;
+    await tx`SELECT g.id,g.name,g.status,g.discount_percent,t.category FROM guest_event.tab_guests g LEFT JOIN guest_event.tickets t ON t.id=g.ticket_id WHERE g.id=${guestId} FOR UPDATE OF g`;
   if (!guest) throw new UserError("Bu misafir silinmiş. Listeyi yenile.");
   return guest as {
     id: string;
     name: string;
     status: TabStatus;
-    discount_percent: number;
+    discount_percent: number | null;
+    category: string | null;
   };
 }
 
-async function balance(tx: Tx, guestId: string, discountPercent: number) {
+/** Discount a new line gets right now: override, else personal rule, else type rule. */
+async function currentDiscount(
+  tx: Tx,
+  guest: { id: string; category: string | null; discount_percent: number | null },
+) {
+  const rules = await tx<
+    { kind: "category" | "guest"; category: "paid" | "team" | "guest" | null; guestId: string | null; percent: number; label: string }[]
+  >`SELECT kind,category,guest_id AS "guestId",percent,label FROM guest_event.discount_rules WHERE (kind='guest' AND guest_id=${guest.id}) OR (kind='category' AND category=${guest.category})`;
+  return effectiveDiscount(
+    { id: guest.id, category: guest.category, discountOverride: guest.discount_percent },
+    rules,
+  ).percent;
+}
+
+async function balance(tx: Tx, guestId: string) {
   const lines = await tx<
-    { guestId: string; price: number; qty: number; complimentary: boolean }[]
-  >`SELECT guest_id AS "guestId",price,qty,complimentary FROM guest_event.tab_lines WHERE guest_id=${guestId}`;
+    { guestId: string; price: number; qty: number; complimentary: boolean; discountPercent: number }[]
+  >`SELECT guest_id AS "guestId",price,qty,complimentary,discount_percent AS "discountPercent" FROM guest_event.tab_lines WHERE guest_id=${guestId}`;
   const payments = await tx<{ guestId: string; amount: number }[]>`SELECT guest_id AS "guestId",amount FROM guest_event.tab_payments WHERE guest_id=${guestId}`;
-  return guestTotals(lines, payments, guestId, discountPercent);
+  return guestTotals(lines, payments, guestId);
 }
 
 async function audit(
@@ -166,8 +183,10 @@ export async function addTabLine(guestId: string, menuItemId: string) {
       if (!item)
         throw new UserError("Bu ürün artık menüde yok. Menüyü yenile.");
       // Always a new row: two stations adding at once never overwrite each other.
+      // The discount in force now is copied onto the line and never changes.
+      const discountPercent = await currentDiscount(tx, guest);
       const [line] =
-        await tx`INSERT INTO guest_event.tab_lines(guest_id,menu_item_id,name,price,qty,station,created_by) VALUES(${guestId},${item.id},${item.name},${item.price},1,${item.station},${user.id}) RETURNING id,created_at`;
+        await tx`INSERT INTO guest_event.tab_lines(guest_id,menu_item_id,name,price,qty,station,discount_percent,created_by) VALUES(${guestId},${item.id},${item.name},${item.price},1,${item.station},${discountPercent},${user.id}) RETURNING id,created_at`;
       let status: TabStatus = guest.status;
       if (status === "closed") {
         status = "open";
@@ -182,6 +201,7 @@ export async function addTabLine(guestId: string, menuItemId: string) {
         qty: 1,
         station: item.station,
         complimentary: false,
+        discountPercent,
         createdBy: user.id,
         createdByName: user.name,
         createdAt: line.created_at.toISOString(),
@@ -233,7 +253,7 @@ export async function addTabPayment(
     return fail(null, "Hangi IBAN'a ödendiğini seç.");
   try {
     const result = await guestDb().begin(async (tx) => {
-      const guest = await lockGuest(tx, guestId);
+      await lockGuest(tx, guestId);
       let account: { id: string; label: string } | null = null;
       if (method === "iban") {
         const [row] =
@@ -241,7 +261,7 @@ export async function addTabPayment(
         if (!row) throw new UserError("Bu IBAN artık kullanımda değil. Ayarları yenile.");
         account = { id: row.id, label: row.label };
       }
-      const { due } = await balance(tx, guestId, guest.discount_percent);
+      const { due } = await balance(tx, guestId);
       const resolved = resolvePaymentAmount(amount, due);
       if ("error" in resolved) throw new UserError(resolved.error);
       if (close === true && due - resolved.amount > 0)
@@ -288,11 +308,7 @@ export async function deleteTabPayment(paymentId: string) {
       const guest = await lockGuest(tx, payment.guest_id);
       await audit(tx, user, "payment.delete", payment.guest_id, payment);
       await tx`DELETE FROM guest_event.tab_payments WHERE id=${paymentId}`;
-      const { due } = await balance(
-        tx,
-        payment.guest_id,
-        guest.discount_percent,
-      );
+      const { due } = await balance(tx, payment.guest_id);
       const status = statusAfterPaymentRemoved(guest.status, due);
       if (status !== guest.status)
         await tx`UPDATE guest_event.tab_guests SET status=${status} WHERE id=${payment.guest_id}`;
@@ -309,8 +325,8 @@ export async function closeTabGuest(guestId: string) {
   if (!isUuid(guestId)) return fail(null, "Geçersiz misafir.");
   try {
     await guestDb().begin(async (tx) => {
-      const guest = await lockGuest(tx, guestId);
-      const { due } = await balance(tx, guestId, guest.discount_percent);
+      await lockGuest(tx, guestId);
+      const { due } = await balance(tx, guestId);
       if (due > 0)
         throw new UserError("Kalan borç varken hesap kapatılamaz. Önce ödeme al.");
       await tx`UPDATE guest_event.tab_guests SET status='closed',pending_method=NULL,pending_account_id=NULL WHERE id=${guestId}`;
@@ -355,17 +371,18 @@ export async function clearPending(guestId: string) {
   }
 }
 
-/** Percentage discount for a guest (team, friends, comps). Admin only. */
-export async function setGuestDiscount(guestId: string, percent: number) {
+const validPercent = (value: unknown): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 100;
+
+/**
+ * Personal discount override for new lines: a percentage, 0 to remove any
+ * discount despite the rules, or null to follow the rules again. Lines
+ * already on the tab keep the discount they were added with. Admin only.
+ */
+export async function setGuestDiscount(guestId: string, percent: number | null) {
   const user = await currentOrganiser();
   if (!user) return fail(null, ADMIN_ERROR);
-  if (
-    !isUuid(guestId) ||
-    typeof percent !== "number" ||
-    !Number.isInteger(percent) ||
-    percent < 0 ||
-    percent > 100
-  )
+  if (!isUuid(guestId) || (percent !== null && !validPercent(percent)))
     return fail(null, "İndirim 0–100 arasında bir yüzde olmalı.");
   try {
     await guestDb().begin(async (tx) => {
@@ -373,13 +390,54 @@ export async function setGuestDiscount(guestId: string, percent: number) {
       await tx`UPDATE guest_event.tab_guests SET discount_percent=${percent} WHERE id=${guestId}`;
       await audit(tx, user, "guest.discount", guestId, {
         name: guest.name,
-        discountPercent: percent,
+        discountPercent: percent ?? (await currentDiscount(tx, { ...guest, discount_percent: null })),
+        override: percent,
         previous: guest.discount_percent,
       });
     });
     return ok({});
   } catch (e) {
     return fail(e, "İndirim kaydedilemedi.");
+  }
+}
+
+/** Replaces the discount rules (type-based and personal). Admin only. */
+export async function saveDiscountRules(items: DiscountRuleDraft[]) {
+  const user = await currentOrganiser();
+  if (!user) return fail(null, ADMIN_ERROR);
+  if (!Array.isArray(items) || items.length > 100)
+    return fail(null, "İndirim kuralları kaydedilemedi.");
+  const clean = items.map((r) => ({
+    id: r?.id === null ? null : r?.id,
+    kind: r?.kind,
+    category: r?.kind === "category" ? r?.category : null,
+    guestId: r?.kind === "guest" ? r?.guestId : null,
+    percent: r?.percent,
+    label: cleanName(r?.label).slice(0, 80),
+  }));
+  for (const r of clean) {
+    if (r.id !== null && !isUuid(r.id)) return fail(null, "Geçersiz kural.");
+    if (r.kind !== "category" && r.kind !== "guest") return fail(null, "Kural türünü seç.");
+    if (r.kind === "category" && !["paid", "team", "guest"].includes(String(r.category)))
+      return fail(null, "Katılımcı türünü seç.");
+    if (r.kind === "guest" && !isUuid(r.guestId)) return fail(null, "Kişiye özel kural için misafir seç.");
+    if (!validPercent(r.percent)) return fail(null, "İndirim 0–100 arasında bir yüzde olmalı.");
+  }
+  try {
+    await guestDb().begin(async (tx) => {
+      const keep = clean.filter((r) => r.id !== null).map((r) => r.id as string);
+      await tx`DELETE FROM guest_event.discount_rules WHERE id<>ALL(${keep}::uuid[])`;
+      for (const r of clean) {
+        if (r.id === null)
+          await tx`INSERT INTO guest_event.discount_rules(kind,category,guest_id,percent,label) VALUES(${r.kind as string},${r.category ?? null},${r.guestId ?? null},${r.percent as number},${r.label})`;
+        else
+          await tx`UPDATE guest_event.discount_rules SET kind=${r.kind as string},category=${r.category ?? null},guest_id=${r.guestId ?? null},percent=${r.percent as number},label=${r.label} WHERE id=${r.id}`;
+      }
+      await audit(tx, user, "discount.rules", null, { rules: clean });
+    });
+    return ok({});
+  } catch {
+    return fail(null, "İndirim kuralları kaydedilemedi. Tekrar dene.");
   }
 }
 

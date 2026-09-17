@@ -1,6 +1,7 @@
 // Run with: node --experimental-strip-types --test tests/tab-calc.test.mjs (Node.js 22.6+)
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { effectiveDiscount } from "../lib/tab/types.ts";
 import {
   balanceMessage,
   buildCsv,
@@ -21,9 +22,9 @@ import {
 } from "../lib/tab/calc.ts";
 
 const lines = [
-  { id: "l1", guestId: "a", menuItemId: null, name: "Bira", price: 20000, qty: 2, station: "bar", complimentary: false, createdBy: "u-bar", createdByName: "Bar", createdAt: "2026-09-19T18:05:00.000Z" },
-  { id: "l2", guestId: "a", menuItemId: null, name: "Pizza dilim", price: 25000, qty: 1, station: "pizza", complimentary: false, createdBy: "u-pizza", createdByName: "Pizza", createdAt: "2026-09-19T18:10:00.000Z" },
-  { id: "l3", guestId: "b", menuItemId: null, name: "Kokteyl", price: 40000, qty: 1, station: "bar", complimentary: false, createdBy: "u-bar", createdByName: "Bar", createdAt: "2026-09-19T18:20:00.000Z" },
+  { id: "l1", guestId: "a", menuItemId: null, name: "Bira", price: 20000, qty: 2, station: "bar", complimentary: false, discountPercent: 0, createdBy: "u-bar", createdByName: "Bar", createdAt: "2026-09-19T18:05:00.000Z" },
+  { id: "l2", guestId: "a", menuItemId: null, name: "Pizza dilim", price: 25000, qty: 1, station: "pizza", complimentary: false, discountPercent: 0, createdBy: "u-pizza", createdByName: "Pizza", createdAt: "2026-09-19T18:10:00.000Z" },
+  { id: "l3", guestId: "b", menuItemId: null, name: "Kokteyl", price: 40000, qty: 1, station: "bar", complimentary: false, discountPercent: 0, createdBy: "u-bar", createdByName: "Bar", createdAt: "2026-09-19T18:20:00.000Z" },
 ];
 const payments = [
   { id: "p1", guestId: "a", amount: 30000, method: "cash", accountId: null, accountLabel: null, createdBy: "u-bar", createdByName: "Bar", createdAt: "2026-09-19T19:00:00.000Z" },
@@ -34,8 +35,8 @@ const accounts = [
   { id: "acc-2", label: "Can", iban: "TR00 2", active: true, sortOrder: 2 },
 ];
 const guests = [
-  { id: "a", name: "Şule Çınar", status: "open", category: "paid", discountPercent: 0, pendingMethod: null, pendingAccountId: null, pendingAccountLabel: null, createdAt: "2026-09-19T17:00:00.000Z" },
-  { id: "b", name: "Ali Işık", status: "closed", category: null, discountPercent: 0, pendingMethod: null, pendingAccountId: null, pendingAccountLabel: null, createdAt: "2026-09-19T17:00:00.000Z" },
+  { id: "a", name: "Şule Çınar", status: "open", category: "paid", discountOverride: null, discountPercent: 0, discountSource: null, pendingMethod: null, pendingAccountId: null, pendingAccountLabel: null, createdAt: "2026-09-19T17:00:00.000Z" },
+  { id: "b", name: "Ali Işık", status: "closed", category: null, discountOverride: null, discountPercent: 0, discountSource: null, pendingMethod: null, pendingAccountId: null, pendingAccountLabel: null, createdAt: "2026-09-19T17:00:00.000Z" },
 ];
 
 test("total, paid and due are derived from lines and payments", () => {
@@ -44,15 +45,33 @@ test("total, paid and due are derived from lines and payments", () => {
   assert.deepEqual(guestTotals(lines, payments, "nobody").total, 0);
 });
 
-test("discounts and complimentary lines reduce what is owed", () => {
-  const withComp = [...lines, { id: "l4", guestId: "a", menuItemId: null, name: "Shot", price: 20000, qty: 1, station: "bar", complimentary: true, createdBy: "u-bar", createdByName: "Bar", createdAt: "2026-09-19T18:30:00.000Z" }];
-  const t = guestTotals(withComp, payments, "a", 20);
+test("per-line discounts and complimentary lines reduce what is owed", () => {
+  // The first bira line was added under a 20% discount, the pizza after the discount was removed.
+  const withComp = [
+    { ...lines[0], discountPercent: 20 },
+    lines[1],
+    { id: "l4", guestId: "a", menuItemId: null, name: "Shot", price: 20000, qty: 1, station: "bar", complimentary: true, discountPercent: 20, createdBy: "u-bar", createdByName: "Bar", createdAt: "2026-09-19T18:30:00.000Z" },
+    lines[2],
+  ];
+  const t = guestTotals(withComp, payments, "a");
   assert.equal(t.subtotal, 65000);
   assert.equal(t.complimentary, 20000, "complimentary value is tracked, not charged");
-  assert.equal(t.discount, 13000, "20% of the subtotal");
-  assert.equal(t.total, 52000);
-  assert.equal(t.due, 22000);
+  assert.equal(t.discount, 8000, "20% of the 400 ₺ bira line only; the later pizza is undiscounted");
+  assert.equal(t.total, 57000);
+  assert.equal(t.due, 27000);
   assert.equal(t.count, 3);
+});
+
+test("effective discount: personal override beats personal rule beats type rule", () => {
+  const rules = [
+    { kind: "category", category: "team", guestId: null, percent: 35, label: "Ekip" },
+    { kind: "guest", category: null, guestId: "a", percent: 50, label: "Dost" },
+  ];
+  assert.deepEqual(effectiveDiscount({ id: "a", category: "team", discountOverride: null }, rules), { percent: 50, source: "rule", label: "Dost" });
+  assert.deepEqual(effectiveDiscount({ id: "b", category: "team", discountOverride: null }, rules), { percent: 35, source: "rule", label: "Ekip" });
+  assert.deepEqual(effectiveDiscount({ id: "b", category: "team", discountOverride: 0 }, rules).percent, 0, "an explicit 0 removes the discount despite the rule");
+  assert.deepEqual(effectiveDiscount({ id: "c", category: "paid", discountOverride: null }, rules).percent, 0);
+  assert.deepEqual(effectiveDiscount({ id: "c", category: null, discountOverride: 15 }, rules).percent, 15);
 });
 
 test("a payment closes the tab only when closing was requested and nothing is left", () => {
@@ -143,7 +162,7 @@ test("summary groups by method, station and item, and lists debtors", () => {
   assert.equal(s.gross, 105000);
   assert.equal(s.discount, 0);
   assert.equal(s.complimentary, 0);
-  const discounted = summarize({ guests: [{ ...guests[0], discountPercent: 50 }, guests[1]], lines, payments });
+  const discounted = summarize({ guests, lines: lines.map((l) => (l.guestId === "a" ? { ...l, discountPercent: 50 } : l)), payments });
   assert.equal(discounted.discount, 32500);
   assert.equal(discounted.total, 72500);
   assert.equal(discounted.debtors[0].due, 2500);
@@ -159,9 +178,9 @@ test("CSV uses semicolons, decimal commas, and one row per line and payment", ()
   const rows = csv.trim().split("\r\n");
   assert.equal(rows[0], "tip;misafir;urun;adet;fiyat;tutar;istasyon_veya_yontem;iban_hesabi;kullanici;zaman");
   assert.equal(rows.length, 1 + lines.length + payments.length);
-  const comp = buildCsv({ guests: [{ ...guests[0], discountPercent: 10 }], lines: [{ ...lines[0], complimentary: true }, lines[1]], payments: [] });
+  const comp = buildCsv({ guests: [guests[0]], lines: [{ ...lines[0], complimentary: true }, { ...lines[1], discountPercent: 10 }], payments: [] });
   assert.ok(comp.includes("ikram;Şule Çınar;Bira;2;200,00;0,00;bar;;Bar;"), "complimentary lines are charged as 0");
-  assert.ok(comp.includes("indirim;Şule Çınar;%10 indirim;;;-25,00;"), "discount rows appear per guest as a negative amount");
+  assert.ok(comp.includes("indirim;Şule Çınar;indirim;;;-25,00;"), "discount rows appear per guest as a negative amount");
   assert.equal(rows[1], "satis;Şule Çınar;Bira;2;200,00;400,00;bar;;Bar;2026-09-19 21:05:00");
   assert.ok(rows.some((r) => r.startsWith("odeme;Ali Işık;;;;400,00;iban;Merve;Bar;")));
   const quoted = buildCsv({ guests: [{ ...guests[0], name: 'A "B"; C' }], lines: lines.slice(0, 1), payments: [] });
