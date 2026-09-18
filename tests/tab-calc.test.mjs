@@ -6,7 +6,9 @@ import {
   balanceMessage,
   buildCsv,
   describeAudit,
+  businessDay,
   canDeleteEntry,
+  filterEntries,
   canDeleteRecord,
   formatMoney,
   guestRows,
@@ -167,6 +169,22 @@ test("only the person who entered a record or an admin may delete it", () => {
   assert.ok(canDeleteRecord({ id: "u-admin", role: "admin" }, record));
   assert.ok(!canDeleteRecord({ id: "u-pizza", role: "pizza" }, record));
   assert.ok(!canDeleteRecord({ id: "u-bar", role: "bar" }, { createdBy: null }));
+});
+
+test("summary filter: a day runs 06:00–06:00 Istanbul, optionally one staff member", () => {
+  assert.equal(businessDay("2026-09-19T17:00:00.000Z"), "2026-09-19", "20:00 Istanbul");
+  assert.equal(businessDay("2026-09-19T23:30:00.000Z"), "2026-09-19", "02:30 after midnight still belongs to the event night");
+  assert.equal(businessDay("2026-09-20T03:00:00.000Z"), "2026-09-20", "06:00 starts the next day");
+  const entries = [
+    { createdAt: "2026-09-18T18:00:00.000Z", createdByName: "Bar 1" },
+    { createdAt: "2026-09-19T18:00:00.000Z", createdByName: "Bar 1" },
+    { createdAt: "2026-09-19T23:30:00.000Z", createdByName: "Bar 2" },
+  ];
+  assert.equal(filterEntries(entries, { day: null, staff: null }).length, 3);
+  assert.equal(filterEntries(entries, { day: "2026-09-19", staff: null }).length, 2);
+  assert.equal(filterEntries(entries, { day: "2026-09-19", staff: "Bar 2" }).length, 1);
+  assert.equal(filterEntries(entries, { day: null, staff: "Bar 1" }).length, 2);
+  assert.equal(describeAudit({ action: "data.reset", guestName: null, record: { lines: 12, sales: 1480000, payments: 5, paid: 1820000 } }), "Adisyon sıfırlandı: 12 ürün (14.800 ₺) ve 5 ödeme (18.200 ₺) silindi");
 });
 
 test("any staff member may delete a wrongly entered line", () => {

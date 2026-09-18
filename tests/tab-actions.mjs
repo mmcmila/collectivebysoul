@@ -119,6 +119,9 @@ try{
  const [entry]=await sql`SELECT id FROM guest_event.tab_audit WHERE guest_id=${guest} AND action='line.delete' LIMIT 1`;
  assert.ok((await action('deleteAuditEntry',[entry.id],bar.cookie)).body.includes('yönetici yetkisi'),'log deletion is admin only');
  assert.ok((await action('clearAudit',[],bar.cookie)).body.includes('yönetici yetkisi'),'clearing the log is admin only');
+ // resetTabData is never run for real here (it would wipe the real data); only its guards are checked.
+ assert.ok((await action('resetTabData',['SIFIRLA'],bar.cookie)).body.includes('yönetici yetkisi'),'reset is admin only');
+ assert.ok((await action('resetTabData',['evet'],admin.cookie)).body.includes('SIFIRLA yaz'),'reset needs the typed confirmation word');
  assert.ok((await action('deleteAuditEntry',[entry.id],admin.cookie)).body.includes('"ok":true'));
  const [logGone]=await sql`SELECT count(*)::int AS n FROM guest_event.tab_audit WHERE id=${entry.id}`;assert.equal(logGone.n,0,'the organiser can delete a log entry');
  // Current round: paying the balance closes the tab; any staff member may delete the payment, which reopens it.
@@ -126,6 +129,14 @@ try{
  const cashPayment=uuid(closing.body);assert.ok((await action('deleteTabPayment',[cashPayment],pizza.cookie)).body.includes('"ok":true'),'any staff member may delete a wrongly entered payment');
  const [payLog]=await sql`SELECT actor_name FROM guest_event.tab_audit WHERE guest_id=${guest} AND action='payment.delete' ORDER BY created_at DESC LIMIT 1`;assert.equal(payLog.actor_name,'TEST pizza '+tag,'the deletion is logged with who did it');
  const [after]=await sql`SELECT status,round FROM guest_event.tab_guests WHERE id=${guest}`;assert.equal(after.status,'open','removing a payment that leaves a balance reopens the tab');assert.equal(after.round,2,'reopening by payment removal stays in the same round');
+ // A new round emptied by a deletion is dropped: the guest stays closed on the paid round.
+ const guest2=uuid((await action('addTabGuest',['TEST misafir 2 '+tag],bar.cookie)).body);created.guests.push(guest2);
+ assert.ok(uuid((await action('addTabLine',[guest2,bira.id],bar.cookie)).body));
+ assert.ok((await action('addTabPayment',[guest2,null,'cash',null],bar.cookie)).body.includes('"status":"closed"'));
+ const again=await action('addTabLine',[guest2,bira.id],bar.cookie);assert.ok(again.body.includes('"round":2'));
+ assert.ok((await action('deleteTabLine',[uuid(again.body)],pizza.cookie)).body.includes('"ok":true'));
+ const [fellBack]=await sql`SELECT status,round FROM guest_event.tab_guests WHERE id=${guest2}`;assert.equal(fellBack.round,1,'the empty round is dropped');assert.equal(fellBack.status,'closed','the guest who paid stays closed');
+ assert.ok((await action('addTabPayment',[guest2,500,'cash',null],bar.cookie)).body.includes('kalan borç yok'),'nothing can be paid on a settled tab');
  assert.ok((await action('deleteTabGuest',[guest],admin.cookie)).body.includes('"ok":true'));
  const [gone]=await sql`SELECT count(*)::int AS n FROM guest_event.tab_lines WHERE guest_id=${guest}`;assert.equal(gone.n,0);
  console.log('PASS: anonymous denied, bar/pizza limited to the module, admin-only settings, readable staff codes (create/list/login/renew), new row per add with price snapshot, owner/admin deletion with audit log, close/reopen rules.');

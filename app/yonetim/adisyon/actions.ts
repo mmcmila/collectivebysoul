@@ -10,6 +10,7 @@ import {
   canDeleteEntry,
   canDeleteRecord,
   guestTotals,
+  hasActivity,
   resolvePaymentAmount,
   startsNewRound,
   stationForRole,
@@ -93,6 +94,20 @@ async function balance(tx: Tx, guestId: string, round: number) {
   >`SELECT guest_id AS "guestId",price,qty,complimentary,discount_percent AS "discountPercent",round FROM guest_event.tab_lines WHERE guest_id=${guestId} AND round=${round}`;
   const payments = await tx<{ guestId: string; amount: number; round: number }[]>`SELECT guest_id AS "guestId",amount,round FROM guest_event.tab_payments WHERE guest_id=${guestId} AND round=${round}`;
   return guestTotals(lines, payments, guestId, round);
+}
+
+/**
+ * A round emptied by deletions is dropped: the guest falls back to the last
+ * round that still has entries, so someone who paid stays under "Kapalı"
+ * instead of looking like a tab that was never opened.
+ */
+async function dropEmptyRounds(tx: Tx, guestId: string, round: number) {
+  let current = round;
+  while (current > 1 && !hasActivity(await balance(tx, guestId, current)))
+    current -= 1;
+  if (current !== round)
+    await tx`UPDATE guest_event.tab_guests SET round=${current} WHERE id=${guestId}`;
+  return current;
 }
 
 /** Keeps the stored status in line with the balance: owed = open, settled = closed. */
@@ -247,7 +262,11 @@ export async function deleteTabLine(lineId: string) {
       await audit(tx, user, "line.delete", line.guest_id, line);
       await tx`DELETE FROM guest_event.tab_lines WHERE id=${lineId}`;
       if (line.round === owner.round)
-        await syncStatus(tx, line.guest_id, owner.round);
+        await syncStatus(
+          tx,
+          line.guest_id,
+          await dropEmptyRounds(tx, line.guest_id, owner.round),
+        );
     });
     return ok({});
   } catch (e) {
@@ -326,7 +345,11 @@ export async function deleteTabPayment(paymentId: string) {
       await tx`DELETE FROM guest_event.tab_payments WHERE id=${paymentId}`;
       // A payment removed from paid history does not touch the current round.
       if (payment.round !== guest.round) return;
-      await syncStatus(tx, payment.guest_id, guest.round);
+      await syncStatus(
+        tx,
+        payment.guest_id,
+        await dropEmptyRounds(tx, payment.guest_id, guest.round),
+      );
     });
     return ok({});
   } catch (e) {
@@ -823,6 +846,48 @@ export async function clearAudit() {
     return ok({ count: rows.length });
   } catch {
     return fail(null, "Hareket kaydı temizlenemedi.");
+  }
+}
+
+/** The word the organiser types to confirm a reset, so it never happens by a stray tap. */
+const RESET_WORD = "SIFIRLA";
+
+/**
+ * Starts over, e.g. after test runs: removes every line, payment and activity
+ * log entry and puts all tabs back to unopened. Guests, menu, IBANs, discount
+ * rules and staff logins stay. What was wiped is kept as one log entry.
+ * Admin only, and only with the typed confirmation word.
+ */
+export async function resetTabData(confirmation: string) {
+  const user = await currentOrganiser();
+  if (!user) return fail(null, ADMIN_ERROR);
+  if (
+    typeof confirmation !== "string" ||
+    confirmation.trim().toLocaleUpperCase("tr") !== RESET_WORD
+  )
+    return fail(null, `Onaylamak için ${RESET_WORD} yaz.`);
+  try {
+    const wiped = await guestDb().begin(async (tx) => {
+      const [lines] =
+        await tx`SELECT count(*)::int AS n,COALESCE(sum(CASE WHEN complimentary THEN 0 ELSE price*qty-round(price*qty*discount_percent/100.0) END),0)::int AS total FROM guest_event.tab_lines`;
+      const [payments] =
+        await tx`SELECT count(*)::int AS n,COALESCE(sum(amount),0)::int AS total FROM guest_event.tab_payments`;
+      await tx`DELETE FROM guest_event.tab_lines`;
+      await tx`DELETE FROM guest_event.tab_payments`;
+      await tx`UPDATE guest_event.tab_guests SET status='open',round=1,pending_method=NULL,pending_account_id=NULL`;
+      await tx`DELETE FROM guest_event.tab_audit`;
+      const record = {
+        lines: lines.n,
+        sales: lines.total,
+        payments: payments.n,
+        paid: payments.total,
+      };
+      await audit(tx, user, "data.reset", null, record);
+      return record;
+    });
+    return ok(wiped);
+  } catch {
+    return fail(null, "Sıfırlanamadı. Tekrar dene.");
   }
 }
 
