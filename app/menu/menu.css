@@ -1,0 +1,167 @@
+/* HIDA Bar menu — follows the printed A4 design; dark variant via system theme. */
+.bar-menu {
+  --menu-paper: #fefefd;
+  --menu-ink: #23241e;
+  --menu-gold: #9c7f52;
+  --menu-soft: #8b8a80;
+  --menu-dots: #b9b6ab;
+  --menu-inner-line: #c9c6bc;
+  min-height: 100dvh;
+  box-sizing: border-box;
+  padding: clamp(10px, 3vw, 28px);
+  display: flex;
+  background: var(--menu-paper);
+  color: var(--menu-ink);
+  font-family: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+}
+@media (prefers-color-scheme: dark) {
+  .bar-menu {
+    --menu-paper: #121410;
+    --menu-ink: #f1eadd;
+    --menu-gold: #c3a56d;
+    --menu-soft: #8f8d82;
+    --menu-dots: #4b4b42;
+    --menu-inner-line: #6f6a58;
+  }
+}
+body:has(.bar-menu) {
+  background: #fefefd;
+}
+@media (prefers-color-scheme: dark) {
+  body:has(.bar-menu) {
+    background: #121410;
+  }
+}
+
+/* Double rule of the printed frame: gold outside, hairline inside. */
+.bar-menu-frame {
+  flex: 1;
+  width: 100%;
+  max-width: 760px;
+  margin-inline: auto;
+  box-sizing: border-box;
+  padding: clamp(44px, 11vw, 96px) clamp(22px, 9vw, 120px)
+    clamp(36px, 8vw, 64px);
+  border: 1px solid var(--menu-gold);
+  outline: 1px solid var(--menu-inner-line);
+  outline-offset: -8px;
+}
+
+.bar-menu-head {
+  text-align: center;
+  margin-bottom: clamp(44px, 10vw, 72px);
+}
+.bar-menu h1 {
+  margin: 0;
+  /* Trailing letter-spacing would push the title off centre. */
+  padding-left: 0.28em;
+  font-size: clamp(1.7rem, 8.4vw, 4.25rem);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: 0.28em;
+  white-space: nowrap;
+}
+.bar-menu-ornament {
+  position: relative;
+  display: block;
+  width: min(44%, 170px);
+  height: 1px;
+  margin: clamp(22px, 5vw, 34px) auto clamp(18px, 4vw, 26px);
+  background: linear-gradient(
+    to right,
+    var(--menu-gold) calc(50% - 9px),
+    transparent calc(50% - 9px) calc(50% + 9px),
+    var(--menu-gold) calc(50% + 9px)
+  );
+}
+.bar-menu-ornament::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: var(--menu-gold);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.bar-menu-event,
+.bar-menu h2 {
+  font-family: var(--font-poppins), sans-serif;
+  font-weight: 400;
+  text-transform: uppercase;
+  color: var(--menu-gold);
+}
+.bar-menu-event {
+  margin: 0;
+  padding-left: 0.5em;
+  font-size: 0.78rem;
+  letter-spacing: 0.5em;
+  text-transform: none;
+}
+.bar-menu-place {
+  margin: 6px 0 0;
+  font-size: 1.15rem;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  color: var(--menu-soft);
+}
+
+.bar-menu section + section {
+  margin-top: clamp(30px, 7vw, 46px);
+}
+.bar-menu h2 {
+  display: flex;
+  align-items: center;
+  gap: 1.4em;
+  margin: 0 0 clamp(12px, 3vw, 18px);
+  font-size: 0.7rem;
+  letter-spacing: 0.42em;
+}
+.bar-menu h2 span {
+  padding-left: 0.42em;
+}
+.bar-menu h2::before,
+.bar-menu h2::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--menu-gold);
+  opacity: 0.75;
+}
+
+.bar-menu ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bar-menu li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  font-size: clamp(1.35rem, 5.4vw, 1.7rem);
+  font-weight: 500;
+  line-height: 1.55;
+}
+.bar-menu-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.bar-menu-dots {
+  flex: 1;
+  min-width: 1.5em;
+  border-bottom: 1px dotted var(--menu-dots);
+  transform: translateY(-0.28em);
+}
+.bar-menu-price {
+  font-variant-numeric: oldstyle-nums;
+  white-space: nowrap;
+}
+
+.bar-menu-note {
+  margin: clamp(40px, 9vw, 60px) 0 0;
+  text-align: center;
+  font-size: 0.98rem;
+  font-style: italic;
+  letter-spacing: 0.05em;
+  color: var(--menu-soft);
+}
