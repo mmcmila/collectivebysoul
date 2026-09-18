@@ -7,13 +7,13 @@ import { currentAdmin, currentOrganiser } from "@/lib/guest/admin-session";
 import { guestDb, UserError } from "@/lib/guest/db";
 import { hash } from "@/lib/guest/session";
 import {
-  canDeleteLine,
+  canDeleteEntry,
   canDeleteRecord,
   guestTotals,
   resolvePaymentAmount,
   startsNewRound,
-  statusAfterPayment,
-  statusAfterPaymentRemoved,
+  stationForRole,
+  tabStatus,
 } from "@/lib/tab/calc";
 import { loadTabData } from "@/lib/tab/data";
 import {
@@ -93,6 +93,13 @@ async function balance(tx: Tx, guestId: string, round: number) {
   >`SELECT guest_id AS "guestId",price,qty,complimentary,discount_percent AS "discountPercent",round FROM guest_event.tab_lines WHERE guest_id=${guestId} AND round=${round}`;
   const payments = await tx<{ guestId: string; amount: number; round: number }[]>`SELECT guest_id AS "guestId",amount,round FROM guest_event.tab_payments WHERE guest_id=${guestId} AND round=${round}`;
   return guestTotals(lines, payments, guestId, round);
+}
+
+/** Keeps the stored status in line with the balance: owed = open, settled = closed. */
+async function syncStatus(tx: Tx, guestId: string, round: number) {
+  const status = tabStatus(await balance(tx, guestId, round));
+  await tx`UPDATE guest_event.tab_guests SET status=${status} WHERE id=${guestId} AND status<>${status}`;
+  return status;
 }
 
 async function audit(
@@ -190,14 +197,13 @@ export async function addTabLine(guestId: string, menuItemId: string) {
       // Always a new row: two stations adding at once never overwrite each other.
       // The discount in force now is copied onto the line and never changes.
       const discountPercent = await currentDiscount(tx, guest);
-      // An order on a settled tab (closed, or fully paid) starts a new round
-      // on the same profile; the paid round stays as history.
-      const status: TabStatus = "open";
+      // An order on a fully paid tab starts a new round on the same profile;
+      // the paid round stays as history.
       let round = guest.round;
-      if (startsNewRound(guest.status, await balance(tx, guestId, guest.round)))
+      if (startsNewRound(await balance(tx, guestId, guest.round))) {
         round = guest.round + 1;
-      if (guest.status !== status || round !== guest.round)
-        await tx`UPDATE guest_event.tab_guests SET status=${status},round=${round} WHERE id=${guestId}`;
+        await tx`UPDATE guest_event.tab_guests SET round=${round} WHERE id=${guestId}`;
+      }
       const [line] =
         await tx`INSERT INTO guest_event.tab_lines(guest_id,menu_item_id,name,price,qty,station,discount_percent,round,created_by) VALUES(${guestId},${item.id},${item.name},${item.price},1,${item.station},${discountPercent},${round},${user.id}) RETURNING id,created_at`;
       const created: TabLine = {
@@ -215,7 +221,7 @@ export async function addTabLine(guestId: string, menuItemId: string) {
         createdByName: user.name,
         createdAt: line.created_at.toISOString(),
       };
-      return { line: created, status };
+      return { line: created, status: await syncStatus(tx, guestId, round) };
     });
     return ok(result);
   } catch (e) {
@@ -232,7 +238,7 @@ export async function deleteTabLine(lineId: string) {
       const [line] =
         await tx`SELECT id,guest_id,menu_item_id,name,price,qty,station,complimentary,round,created_by,created_at FROM guest_event.tab_lines WHERE id=${lineId} FOR UPDATE`;
       if (!line) throw new UserError("Bu kalem zaten silinmiş.");
-      if (!canDeleteLine(user))
+      if (!canDeleteEntry(user))
         throw new UserError("Bu kalemi silme yetkin yok.");
       const owner = await lockGuest(tx, line.guest_id);
       // Paid history is locked for staff; only the organiser may clean it up.
@@ -240,6 +246,8 @@ export async function deleteTabLine(lineId: string) {
         throw new UserError("Kapanmış eski hesaba ait kalemi yalnızca yönetici silebilir.");
       await audit(tx, user, "line.delete", line.guest_id, line);
       await tx`DELETE FROM guest_event.tab_lines WHERE id=${lineId}`;
+      if (line.round === owner.round)
+        await syncStatus(tx, line.guest_id, owner.round);
     });
     return ok({});
   } catch (e) {
@@ -276,10 +284,10 @@ export async function addTabPayment(
       if ("error" in resolved) throw new UserError(resolved.error);
       const [payment] =
         await tx`INSERT INTO guest_event.tab_payments(guest_id,amount,method,bank_account_id,round,created_by) VALUES(${guestId},${resolved.amount},${method},${account?.id ?? null},${guest.round},${user.id}) RETURNING id,created_at`;
-      // Nothing left to pay closes the tab; a balance keeps it open.
-      const status = statusAfterPayment(due - resolved.amount);
       // A recorded payment ends any "will pay by IBAN later" state.
-      await tx`UPDATE guest_event.tab_guests SET status=${status},pending_method=NULL,pending_account_id=NULL WHERE id=${guestId}`;
+      await tx`UPDATE guest_event.tab_guests SET pending_method=NULL,pending_account_id=NULL WHERE id=${guestId} AND pending_method IS NOT NULL`;
+      // Nothing left to pay closes the tab; a balance keeps it open.
+      const status = await syncStatus(tx, guestId, guest.round);
       const created: TabPayment = {
         id: payment.id,
         guestId,
@@ -309,10 +317,8 @@ export async function deleteTabPayment(paymentId: string) {
       const [payment] =
         await tx`SELECT id,guest_id,amount,method,bank_account_id,round,created_by,created_at FROM guest_event.tab_payments WHERE id=${paymentId} FOR UPDATE`;
       if (!payment) throw new UserError("Bu ödeme zaten silinmiş.");
-      if (!canDeleteRecord(user, { createdBy: payment.created_by }))
-        throw new UserError(
-          "Sadece ödemeyi alan kişi veya yönetici silebilir.",
-        );
+      if (!canDeleteEntry(user))
+        throw new UserError("Bu ödemeyi silme yetkin yok.");
       const guest = await lockGuest(tx, payment.guest_id);
       if (payment.round !== guest.round && user.role !== "admin")
         throw new UserError("Kapanmış eski hesaba ait ödemeyi yalnızca yönetici silebilir.");
@@ -320,32 +326,11 @@ export async function deleteTabPayment(paymentId: string) {
       await tx`DELETE FROM guest_event.tab_payments WHERE id=${paymentId}`;
       // A payment removed from paid history does not touch the current round.
       if (payment.round !== guest.round) return;
-      const { due } = await balance(tx, payment.guest_id, guest.round);
-      const status = statusAfterPaymentRemoved(guest.status, due);
-      if (status !== guest.status)
-        await tx`UPDATE guest_event.tab_guests SET status=${status} WHERE id=${payment.guest_id}`;
+      await syncStatus(tx, payment.guest_id, guest.round);
     });
     return ok({});
   } catch (e) {
     return fail(e, "Ödeme silinemedi.");
-  }
-}
-
-export async function closeTabGuest(guestId: string) {
-  const user = await currentAdmin();
-  if (!user) return fail(null, SESSION_ERROR);
-  if (!isUuid(guestId)) return fail(null, "Geçersiz misafir.");
-  try {
-    await guestDb().begin(async (tx) => {
-      const guest = await lockGuest(tx, guestId);
-      const { due } = await balance(tx, guestId, guest.round);
-      if (due > 0)
-        throw new UserError("Kalan borç varken hesap kapatılamaz. Önce ödemeyi kaydet.");
-      await tx`UPDATE guest_event.tab_guests SET status='closed',pending_method=NULL,pending_account_id=NULL WHERE id=${guestId}`;
-    });
-    return ok({});
-  } catch (e) {
-    return fail(e, "Hesap kapatılamadı.");
   }
 }
 
@@ -470,12 +455,8 @@ export async function setLineComplimentary(lineId: string, complimentary: boolea
       if (line.round !== owner.round)
         throw new UserError("Kapanmış eski hesaba ait kalem değiştirilemez.");
       await tx`UPDATE guest_event.tab_lines SET complimentary=${complimentary} WHERE id=${lineId}`;
-      // Charging a line again on a closed tab leaves a balance: it is open again.
-      if (owner.status === "closed") {
-        const { due } = await balance(tx, line.guest_id, owner.round);
-        if (due > 0)
-          await tx`UPDATE guest_event.tab_guests SET status='open' WHERE id=${line.guest_id}`;
-      }
+      // "İkram" changes the balance, so the tab may close or open again.
+      await syncStatus(tx, line.guest_id, owner.round);
       await audit(tx, user, "line.complimentary", line.guest_id, {
         ...line,
         complimentary,
@@ -493,7 +474,11 @@ export async function deleteMenuItem(itemId: string) {
   if (!user) return fail(null, ADMIN_ERROR);
   if (!isUuid(itemId)) return fail(null, "Geçersiz ürün.");
   try {
-    await guestDb()`DELETE FROM guest_event.menu_items WHERE id=${itemId}`;
+    await guestDb().begin(async (tx) => {
+      const [item] =
+        await tx`DELETE FROM guest_event.menu_items WHERE id=${itemId} RETURNING id,name,price,station`;
+      if (item) await audit(tx, user, "menu.delete", null, item);
+    });
     return ok({});
   } catch {
     return fail(null, "Ürün silinemedi.");
@@ -514,7 +499,9 @@ export async function deleteBankAccount(accountId: string) {
           "Bu IBAN'a ödeme kaydedilmiş; silmek yerine pasife al.",
         );
       await tx`UPDATE guest_event.tab_guests SET pending_account_id=NULL WHERE pending_account_id=${accountId}`;
-      await tx`DELETE FROM guest_event.bank_accounts WHERE id=${accountId}`;
+      const [account] =
+        await tx`DELETE FROM guest_event.bank_accounts WHERE id=${accountId} RETURNING id,label,iban`;
+      if (account) await audit(tx, user, "account.delete", null, account);
     });
     return ok({});
   } catch (e) {
@@ -522,9 +509,49 @@ export async function deleteBankAccount(accountId: string) {
   }
 }
 
+/**
+ * Adds one product to the menu. Open to all staff so a missing drink can be
+ * entered at the bar; staff add to their own station only. Editing prices and
+ * deleting stay with the organiser, and the addition is logged.
+ */
+export async function addMenuItem(name: string, price: number, station: string) {
+  const user = await currentAdmin();
+  if (!user) return fail(null, SESSION_ERROR);
+  const clean = cleanName(name);
+  if (clean.length < 1 || clean.length > 80)
+    return fail(null, "Ürün adı 1–80 karakter olmalı.");
+  if (
+    typeof price !== "number" ||
+    !Number.isInteger(price) ||
+    price < 0 ||
+    price > 100_000_000
+  )
+    return fail(null, "Fiyatı kontrol et.");
+  const target = user.role === "admin" ? station : stationForRole(user.role);
+  if (!isStation(target)) return fail(null, "İstasyon seç.");
+  try {
+    await guestDb().begin(async (tx) => {
+      const [same] =
+        await tx`SELECT id FROM guest_event.menu_items WHERE lower(name)=lower(${clean}) AND active LIMIT 1`;
+      if (same) throw new UserError("Bu ürün menüde zaten var.");
+      const [item] =
+        await tx`INSERT INTO guest_event.menu_items(name,price,station,active,sort_order) SELECT ${clean},${price},${target},true,COALESCE(max(sort_order),0)+1 FROM guest_event.menu_items RETURNING id,name,price,station`;
+      await audit(tx, user, "menu.create", null, item);
+    });
+    return ok({});
+  } catch (e) {
+    return fail(e, "Ürün eklenemedi. Tekrar dene.");
+  }
+}
+
+/**
+ * Saves the menu editor: new products, prices, names, sections and hiding what
+ * ran out (active). Open to all staff; every change is written to the activity
+ * log. Deleting a product for good is deleteMenuItem (admin only).
+ */
 export async function saveMenu(items: MenuDraftItem[]) {
-  const user = await currentOrganiser();
-  if (!user) return fail(null, ADMIN_ERROR);
+  const user = await currentAdmin();
+  if (!user) return fail(null, SESSION_ERROR);
   if (!Array.isArray(items) || items.length > 200)
     return fail(null, "Menü kaydedilemedi.");
   const clean = items.map((item, index) => ({
@@ -551,11 +578,38 @@ export async function saveMenu(items: MenuDraftItem[]) {
   }
   try {
     await guestDb().begin(async (tx) => {
+      const before = new Map(
+        (
+          await tx<
+            { id: string; name: string; price: number; station: string; active: boolean }[]
+          >`SELECT id,name,price,station,active FROM guest_event.menu_items FOR UPDATE`
+        ).map((row) => [row.id, row]),
+      );
       for (const item of clean) {
-        if (item.id === null)
-          await tx`INSERT INTO guest_event.menu_items(name,price,station,active,sort_order) VALUES(${item.name},${item.price as number},${item.station as string},${item.active},${item.sortOrder})`;
-        else
-          await tx`UPDATE guest_event.menu_items SET name=${item.name},price=${item.price as number},station=${item.station as string},active=${item.active},sort_order=${item.sortOrder} WHERE id=${item.id}`;
+        const now = {
+          name: item.name,
+          price: item.price as number,
+          station: item.station as string,
+          active: item.active,
+        };
+        if (item.id === null) {
+          await tx`INSERT INTO guest_event.menu_items(name,price,station,active,sort_order) VALUES(${now.name},${now.price},${now.station},${now.active},${item.sortOrder})`;
+          await audit(tx, user, "menu.create", null, now);
+          continue;
+        }
+        const old = before.get(item.id);
+        if (!old) continue; // deleted meanwhile by the organiser
+        await tx`UPDATE guest_event.menu_items SET name=${now.name},price=${now.price},station=${now.station},active=${now.active},sort_order=${item.sortOrder} WHERE id=${item.id}`;
+        if (
+          old.name !== now.name ||
+          old.price !== now.price ||
+          old.station !== now.station ||
+          old.active !== now.active
+        )
+          await audit(tx, user, "menu.update", null, {
+            ...now,
+            from: { name: old.name, price: old.price, station: old.station, active: old.active },
+          });
       }
     });
     return ok({});

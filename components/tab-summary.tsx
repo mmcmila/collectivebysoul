@@ -143,7 +143,7 @@ export function TabSummary({
         )}
       </section>
       <section className="tab-card" aria-labelledby="tab-debtors">
-        <h2 id="tab-debtors">Borcu olanlar</h2>
+        <h2 id="tab-debtors">Açık hesaplar · borcu olanlar ({s.debtors.length})</h2>
         {s.debtors.length ? (
           <table className="tab-table">
             <tbody>
@@ -159,12 +159,51 @@ export function TabSummary({
           <p className="ad-note">Açık borç yok.</p>
         )}
       </section>
+      {s.overpaid.length > 0 && (
+        <section className="tab-card" aria-labelledby="tab-overpaid">
+          <h2 id="tab-overpaid">Fazla ödeme · iade gerekebilir ({s.overpaid.length})</h2>
+          <p className="ad-note">
+            Bu misafirlerden siparişlerinin tutarından fazla para alınmış
+            görünüyor; genelde ödeme alındıktan sonra ürün silinince olur.
+            Parayı iade et ya da yanlış ödemeyi profilden sil. Bu yüzden
+            Tahsil, Satış + Açık toplamından yüksek çıkabilir.
+          </p>
+          <table className="tab-table">
+            <tbody>
+              {s.overpaid.map((g) => (
+                <tr key={g.id}>
+                  <th scope="row">{g.name}</th>
+                  <td className="owe">{formatMoney(g.amount)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+      <section className="tab-card" aria-labelledby="tab-settled">
+        <h2 id="tab-settled">Kapalı hesaplar · ödeyenler ({s.settled.length})</h2>
+        {s.settled.length ? (
+          <table className="tab-table">
+            <tbody>
+              {s.settled.map((g) => (
+                <tr key={g.id}>
+                  <th scope="row">{g.name}</th>
+                  <td>{formatMoney(g.paid)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="ad-note">Hesabının tamamını ödeyen henüz yok.</p>
+        )}
+      </section>
       {data.audit.length > 0 && (
         <section className="tab-card" aria-labelledby="tab-audit">
-          <h2 id="tab-audit">Hareket kaydı</h2>
+          <h2 id="tab-audit">İşlem geçmişi</h2>
           <p className="ad-note">
-            Silinen kalemler ve ödemeler, ikram ve indirim değişiklikleri,
-            personel girişleri; kim, ne zaman. Son 50 hareket; yalnızca
+            Silinen her şey (ürün, ödeme, misafir, menü ürünü, IBAN), ikram ve
+            indirim değişiklikleri, personel girişleri; kim, ne zaman. Son 50
+            işlem. Personel ürün ve ödeme silebilir ama bu kaydı yalnızca
             yönetici görür ve silebilir.
           </p>
           <ul className="tab-lines tab-audit">
@@ -195,14 +234,14 @@ export function TabSummary({
             onClick={async () => {
               if (
                 await confirmAction(
-                  "Hareket kaydının tamamı silinsin mi? Eski kayıtlar dahil hepsi silinir; bu işlem geri alınamaz.",
+                  "İşlem geçmişinin tamamı silinsin mi? Eski kayıtlar dahil hepsi silinir; bu işlem geri alınamaz.",
                   "Tamamını sil",
                 )
               )
-                void cleanAudit(clearAudit, "Hareket kaydı temizlendi");
+                void cleanAudit(clearAudit, "İşlem geçmişi temizlendi");
             }}
           >
-            Hareket kaydının tamamını sil
+            İşlem geçmişinin tamamını sil
           </button>
         </section>
       )}

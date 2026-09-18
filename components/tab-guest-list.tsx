@@ -57,6 +57,7 @@ export function TabGuestList({
         {open.open
           ? `${open.open} açık hesap · ${formatMoney(open.due)} bekliyor`
           : "Açık hesap yok"}
+        {open.closed > 0 && ` · ${open.closed} kapalı hesap`}
       </p>
       <div className="tab-toolbar">
         <input
@@ -139,15 +140,23 @@ export function TabGuestList({
                   {g.discountPercent === 0 && g.discount > 0 && " · indirimli kalemler var"}
                 </span>
               </span>
-              <span className={`ad-badge ${g.status === "open" ? "pending" : "done"}`}>
-                {g.pendingMethod === "iban"
-                  ? "IBAN bekleniyor"
-                  : g.status === "open"
-                    ? "Açık"
-                    : "Kapalı"}
-              </span>
-              <span className={`tab-due ${g.due > 0 ? "owe" : "zero"}`}>
-                {formatMoney(g.due)}
+              {g.state !== "unopened" && (
+                <span className={`ad-badge ${g.state === "open" ? "pending" : "done"}`}>
+                  {g.state === "closed"
+                    ? "Kapalı"
+                    : g.pendingMethod === "iban"
+                      ? "IBAN bekleniyor"
+                      : "Açık"}
+                </span>
+              )}
+              {/* Open: what is still owed. Closed: everything the guest paid. */}
+              <span
+                className={`tab-due ${g.state === "open" ? "owe" : g.state === "closed" ? "paid" : "zero"}`}
+              >
+                {formatMoney(g.state === "closed" ? g.paidTotal : g.due)}
+                {g.state !== "unopened" && (
+                  <small>{g.state === "closed" ? "ödedi" : "borç"}</small>
+                )}
               </span>
             </button>
           </li>
@@ -163,8 +172,10 @@ export function TabGuestList({
           <p>
             {data.guests.length
               ? filter === "open" && !query.trim()
-                ? "Şu an açık hesap yok. Bir misafir arayıp hesabını açabilirsin."
-                : "Bu filtreye uygun misafir yok."
+                ? "Şu an borcu olan yok. Bir misafir arayıp hesabını açabilirsin."
+                : filter === "closed" && !query.trim()
+                  ? "Hesabının tamamını ödeyen henüz yok."
+                  : "Bu filtreye uygun misafir yok."
               : "Henüz misafir yok. “+ Misafir” ile ekle; yönetici Ayarlar’dan toplu liste de yapıştırabilir."}
           </p>
           {query.trim().length > 0 &&

@@ -5,7 +5,6 @@ import {
   addTabLine,
   addTabPayment,
   clearPending,
-  closeTabGuest,
   deleteTabGuest,
   deleteTabLine,
   deleteTabPayment,
@@ -13,11 +12,11 @@ import {
   setGuestDiscount,
   setLineComplimentary,
 } from "@/app/yonetim/adisyon/actions";
+import { TabMenuAdd } from "@/components/tab-menu-add";
 import type { Notify } from "@/components/tab-module";
 import {
   balanceMessage,
-  canClose,
-  canDeleteLine,
+  canDeleteEntry,
   canDeleteRecord,
   formatMoney,
   formatTime,
@@ -26,8 +25,7 @@ import {
   parseAmount,
   pastRounds,
   startsNewRound,
-  statusAfterPayment,
-  statusAfterPaymentRemoved,
+  tabStatus,
   visibleMenu,
 } from "@/lib/tab/calc";
 import { submitOnEnter } from "@/lib/tab/forms";
@@ -42,7 +40,6 @@ import {
   type TabGuest,
   type TabLine,
   type TabPayment,
-  type TabStatus,
 } from "@/lib/tab/types";
 
 type Result = { error?: string };
@@ -90,24 +87,17 @@ export function TabGuestDetail({
   const menu = visibleMenu(data.menu, station, allMenu);
   const isAdmin = user.role === "admin";
 
-  const setStatus = (
-    d: TabData,
-    status: TabStatus,
-    round = guest.round,
-  ): TabData => ({
+  // Open or closed is never stored here: it follows the balance (tabStatus).
+  const setRound = (d: TabData, round: number): TabData => ({
     ...d,
-    guests: d.guests.map((g) =>
-      g.id === guest.id ? { ...g, status, round } : g,
-    ),
+    guests: d.guests.map((g) => (g.id === guest.id ? { ...g, round } : g)),
   });
 
   const addItem = async (item: MenuItem) => {
     const id = tempId();
-    const previous = guest.status;
+    const previous = guest.round;
     // An order on a paid tab starts a new round; the paid one moves to history.
-    const round = startsNewRound(guest.status, totals)
-      ? guest.round + 1
-      : guest.round;
+    const round = startsNewRound(totals) ? guest.round + 1 : guest.round;
     const temp: TabLine = {
       id,
       guestId: guest.id,
@@ -123,25 +113,21 @@ export function TabGuestDetail({
       createdByName: user.name,
       createdAt: new Date().toISOString(),
     };
-    mutate((d) => setStatus({ ...d, lines: [temp, ...d.lines] }, "open", round));
+    mutate((d) => setRound({ ...d, lines: [temp, ...d.lines] }, round));
     notify("+ " + item.name);
     const r = await addTabLine(guest.id, item.id).catch(
       (): Result => ({ error: OFFLINE }),
     );
     if (!("line" in r) || r.error) {
       mutate((d) =>
-        setStatus(
-          { ...d, lines: d.lines.filter((l) => l.id !== id) },
-          previous,
-        ),
+        setRound({ ...d, lines: d.lines.filter((l) => l.id !== id) }, previous),
       );
       notify(r.error || "Ürün eklenemedi.", "error");
       return;
     }
     mutate((d) =>
-      setStatus(
+      setRound(
         { ...d, lines: d.lines.map((l) => (l.id === id ? r.line : l)) },
-        r.status,
         r.line.round,
       ),
     );
@@ -174,11 +160,15 @@ export function TabGuestDetail({
     const parsed = parseAmount(amount);
     if (parsed === undefined) return notify("Tutarı kontrol et.", "error");
     const value = parsed ?? totals.due;
-    if (value <= 0) return notify("Bu hesapta kalan borç yok.", "error");
+    if (totals.due <= 0) return notify("Bu hesapta kalan borç yok.", "error");
+    if (value > totals.due)
+      return notify(
+        `Tutar kalan borçtan (${formatMoney(totals.due)}) fazla olamaz.`,
+        "error",
+      );
     if (method === "iban" && !account)
       return notify("Önce Ayarlar’dan bir IBAN ekle.", "error");
     const id = tempId();
-    const previous = guest.status;
     const temp: TabPayment = {
       id,
       guestId: guest.id,
@@ -192,20 +182,15 @@ export function TabGuestDetail({
       createdAt: new Date().toISOString(),
     };
     setBusy(true);
-    mutate((d) =>
-      setStatus(
-        {
-          ...d,
-          payments: [...d.payments, temp],
-          guests: d.guests.map((g) =>
-            g.id === guest.id
-              ? { ...g, pendingMethod: null, pendingAccountId: null, pendingAccountLabel: null }
-              : g,
-          ),
-        },
-        statusAfterPayment(totals.due - value),
+    mutate((d) => ({
+      ...d,
+      payments: [...d.payments, temp],
+      guests: d.guests.map((g) =>
+        g.id === guest.id
+          ? { ...g, pendingMethod: null, pendingAccountId: null, pendingAccountLabel: null }
+          : g,
       ),
-    );
+    }));
     setAmount("");
     const r = await addTabPayment(
       guest.id,
@@ -217,24 +202,17 @@ export function TabGuestDetail({
     );
     setBusy(false);
     if (!("payment" in r) || r.error) {
-      mutate((d) =>
-        setStatus(
-          { ...d, payments: d.payments.filter((p) => p.id !== id) },
-          previous,
-        ),
-      );
+      mutate((d) => ({
+        ...d,
+        payments: d.payments.filter((p) => p.id !== id),
+      }));
       notify(r.error || "Ödeme kaydedilemedi.", "error");
       return;
     }
-    mutate((d) =>
-      setStatus(
-        {
-          ...d,
-          payments: d.payments.map((p) => (p.id === id ? r.payment : p)),
-        },
-        r.status,
-      ),
-    );
+    mutate((d) => ({
+      ...d,
+      payments: d.payments.map((p) => (p.id === id ? r.payment : p)),
+    }));
     notify(
       `Ödeme alındı: ${formatMoney(r.payment.amount)} · ${paymentMethods[method]}${r.payment.accountLabel ? ` · ${r.payment.accountLabel}` : ""}${r.status === "closed" ? " · borç kalmadı, hesap kapandı" : ""}`,
     );
@@ -309,43 +287,19 @@ export function TabGuestDetail({
       ))
     )
       return;
-    const previous = guest.status;
-    mutate((d) =>
-      setStatus(
-        { ...d, payments: d.payments.filter((p) => p.id !== payment.id) },
-        statusAfterPaymentRemoved(previous, totals.due + payment.amount),
-      ),
-    );
+    mutate((d) => ({
+      ...d,
+      payments: d.payments.filter((p) => p.id !== payment.id),
+    }));
     const r = await deleteTabPayment(payment.id).catch(
       (): Result => ({ error: OFFLINE }),
     );
     if (r.error) {
-      mutate((d) =>
-        setStatus({ ...d, payments: [...d.payments, payment] }, previous),
-      );
+      mutate((d) => ({ ...d, payments: [...d.payments, payment] }));
       notify(r.error, "error");
       return;
     }
     notify("Ödeme silindi");
-    void refresh();
-  };
-
-  // "Hesabı kapat" means nothing is owed, so it is only offered without a
-  // balance (e.g. a tab of complimentary lines); payments close a tab themselves.
-  const closeTab = async () => {
-    if (!closable) return;
-    setBusy(true);
-    mutate((d) => setStatus(d, "closed"));
-    const r = await closeTabGuest(guest.id).catch(
-      (): Result => ({ error: OFFLINE }),
-    );
-    setBusy(false);
-    if (r.error) {
-      mutate((d) => setStatus(d, "open"));
-      notify(r.error, "error");
-      return;
-    }
-    notify("Hesap kapatıldı");
     void refresh();
   };
 
@@ -408,8 +362,8 @@ export function TabGuestDetail({
     }
   };
 
-  const open = guest.status === "open";
-  const closable = canClose(guest.status, totals.due) && hasActivity(totals);
+  const active = hasActivity(totals);
+  const open = tabStatus(totals) === "open";
   const typed = parseAmount(amount);
   const payable = typed === undefined ? 0 : (typed ?? totals.due);
   return (
@@ -424,8 +378,8 @@ export function TabGuestDetail({
             <small className="tab-round-badge">{guest.round}. hesap</small>
           )}
         </h1>
-        <span className={`ad-badge ${open ? "pending" : "done"}`}>
-          {open ? "Açık" : "Kapalı"}
+        <span className={`ad-badge ${open && active ? "pending" : "done"}`}>
+          {!active ? "Hesap açılmadı" : open ? "Açık · borçlu" : "Kapalı · ödendi"}
         </span>
       </div>
       {(guest.pendingMethod || guest.discountPercent > 0) && (
@@ -504,11 +458,14 @@ export function TabGuestDetail({
             ))}
           </div>
         ) : (
-          <p className="ad-note">
-            Bu istasyon için aktif ürün yok. Yönetici Ayarlar → Menü’den
-            ekleyebilir.
-          </p>
+          <p className="ad-note">Bu istasyon için aktif ürün yok.</p>
         )}
+        <TabMenuAdd
+          user={user}
+          station={station}
+          refresh={refresh}
+          notify={notify}
+        />
       </section>
 
       <section className="tab-card" aria-labelledby="tab-lines-title">
@@ -557,7 +514,7 @@ export function TabGuestDetail({
                     🎁
                   </button>
                 )}
-                {canDeleteLine(user) && (
+                {canDeleteEntry(user) && (
                   <button
                     className="tab-x"
                     aria-label={`${line.name} sil`}
@@ -592,7 +549,7 @@ export function TabGuestDetail({
                   </span>
                 </span>
                 <span className="tab-line-amount">{formatMoney(p.amount)}</span>
-                {canDeleteRecord(user, p) && (
+                {canDeleteEntry(user) && (
                   <button
                     className="tab-x"
                     aria-label={`${formatMoney(p.amount)} ödemesini sil`}
@@ -658,33 +615,22 @@ export function TabGuestDetail({
           <div className="tab-row">
             <button
               className="ad-primary"
-              disabled={busy || (typed === null && totals.due <= 0)}
+              disabled={busy || totals.due <= 0}
             >
               {payable > 0
                 ? `Ödeme alındı · ${formatMoney(payable)}`
                 : "Ödeme alındı"}
             </button>
-            {closable ? (
-              <button
-                type="button"
-                className="tab-secondary"
-                disabled={busy}
-                onClick={() => void closeTab()}
-              >
-                Hesabı kapat · borç yok
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="tab-secondary"
-                disabled={busy || totals.due <= 0}
-                onClick={() => void leaveOpen()}
-              >
-                {method === "iban" && totals.due > 0
-                  ? "Açık hesap · IBAN ile ödeyecek"
-                  : "Açık hesap"}
-              </button>
-            )}
+            <button
+              type="button"
+              className="tab-secondary"
+              disabled={busy || totals.due <= 0}
+              onClick={() => void leaveOpen()}
+            >
+              {method === "iban" && totals.due > 0
+                ? "Açık hesap · IBAN ile ödeyecek"
+                : "Açık hesap"}
+            </button>
           </div>
           {guest.pendingMethod === "iban" && (
             <p className="tab-pending-note">
@@ -697,11 +643,9 @@ export function TabGuestDetail({
           <p className="ad-note">
             {totals.due > 0
               ? "Borç varken hesap açıktır. “Ödeme alındı” yazılan tutarı, boşsa kalanın tamamını kaydeder; borç bitince hesap kendiliğinden kapanır. “Açık hesap” ödeme almadan hesabı açık bırakır."
-              : open
-                ? closable
-                  ? "Borç yok. “Hesabı kapat” ile hesabı Kapalılar’a alabilirsin."
-                  : "Henüz borç yok."
-                : "Hesap kapalı · borç yok. Yeni sipariş eklenirse yeni hesap açılır; ödenmiş siparişler profilin en altında görünür."}
+              : active
+                ? `Hesap kapalı · borç yok, ${formatMoney(totals.paid)} ödendi. Yeni sipariş eklenirse yeni hesap açılır; ödenmiş siparişler profilin en altında görünür.`
+                : "Henüz borç yok."}
           </p>
         </form>
         {method === "iban" && (
