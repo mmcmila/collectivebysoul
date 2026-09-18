@@ -75,43 +75,38 @@ export function guestTotals(
   };
 }
 
-/** Rule: a tab with a balance is open; once everything is paid it is closed. */
-export const statusAfterPayment = (due: number): TabStatus =>
-  due <= 0 ? "closed" : "open";
-
-/** Rule: adding a line to a closed tab reopens it. */
-export const statusAfterLine = (): TabStatus => "open";
+/**
+ * The one rule for open and closed: a tab that owes money is open; a tab with
+ * activity and nothing owed is closed. Nobody closes a tab by hand, it follows
+ * the balance after every order, payment and deletion.
+ */
+export const tabStatus = (
+  round: Pick<Totals, "count" | "paid" | "due">,
+): TabStatus => (hasActivity(round) && round.due <= 0 ? "closed" : "open");
 
 /**
- * Rule: a new order on a settled round (closed, or fully paid) starts the next
- * round, so the paid orders move to the history at the bottom of the profile.
- * An overpaid round stays current so the credit is used by the new order.
+ * Rule: a new order on a fully paid round starts the next round, so the paid
+ * orders move to the history at the bottom of the profile. An overpaid round
+ * stays current so the credit is used by the new order.
  */
-export const startsNewRound = (
-  status: TabStatus,
-  round: Pick<Totals, "count" | "paid" | "due">,
-) => round.count > 0 && round.due === 0 && (status === "closed" || round.paid > 0);
+export const startsNewRound = (round: Pick<Totals, "count" | "paid" | "due">) =>
+  round.count > 0 && round.paid > 0 && round.due === 0;
 
-/** Rule: removing a payment that leaves a balance reopens a closed tab. */
-export const statusAfterPaymentRemoved = (
-  status: TabStatus,
-  due: number,
-): TabStatus => (due > 0 ? "open" : status);
-
-/** Rule: "Hesabı kapat" is only allowed when nothing is owed. */
-export const canClose = (status: TabStatus, due: number) =>
-  status === "open" && due <= 0;
-
-/** Empty amount means "take the whole balance". Amounts are kuruş. */
+/**
+ * Empty amount means "take the whole balance". Amounts are kuruş. More than
+ * the balance is refused: it is almost always a typo and would leave the
+ * summary with more money collected than sold.
+ */
 export function resolvePaymentAmount(
   requested: number | null,
   due: number,
 ): { amount: number } | { error: string } {
   if (requested !== null && (!Number.isInteger(requested) || requested <= 0))
     return { error: "Tutarı kontrol et." };
-  const amount = requested ?? due;
-  if (amount <= 0) return { error: "Bu hesapta kalan borç yok." };
-  return { amount };
+  if (due <= 0) return { error: "Bu hesapta kalan borç yok." };
+  if (requested !== null && requested > due)
+    return { error: `Tutar kalan borçtan (${formatMoney(due)}) fazla olamaz.` };
+  return { amount: requested ?? due };
 }
 
 /** "12,50", "12.50", "1.250" and "1250" → kuruş. Empty → null. */
@@ -183,13 +178,14 @@ export const stationForRole = (role: StaffRole): Station =>
   role === "pizza" ? "pizza" : "bar";
 
 /**
- * Any staff member may delete a wrongly entered line, whoever entered it;
- * the deletion is logged with who deleted it and when.
+ * Any staff member may delete a wrongly entered line or payment, whoever
+ * entered it. Every deletion is written to the activity log, which only the
+ * organiser can delete.
  */
-export const canDeleteLine = (user: { role: StaffRole }) =>
+export const canDeleteEntry = (user: { role: StaffRole }) =>
   user.role === "admin" || user.role === "bar" || user.role === "pizza";
 
-/** Payments (and "ikram") can be changed by the person who entered them or an admin. */
+/** "İkram" can be changed by the person who entered the line or an admin. */
 export const canDeleteRecord = (
   user: { id: string; role: StaffRole },
   record: { createdBy: string | null },
@@ -206,6 +202,7 @@ export type Summary = {
   discount: number;
   complimentary: number;
   paid: number;
+  /** What guests still owe: the sum of the open tabs, never negative. */
   due: number;
   byMethod: Record<PaymentMethod, number>;
   byStation: Record<Station, number>;
@@ -219,7 +216,15 @@ export type Summary = {
   }[];
   /** IBAN receipts per account, including inactive accounts that received money. */
   byAccount: { id: string; label: string; iban: string; amount: number; count: number }[];
+  /** Guests who owe money (open tabs), highest balance first. */
   debtors: { id: string; name: string; due: number }[];
+  /** Guests who paid everything (closed tabs) and what they paid in total. */
+  settled: { id: string; name: string; paid: number }[];
+  /**
+   * Guests who paid more than their orders are worth, e.g. a product deleted
+   * after it was paid. The difference may have to be given back.
+   */
+  overpaid: { id: string; name: string; amount: number }[];
 };
 
 export function summarize(
@@ -292,21 +297,34 @@ export function summarize(
       accounts.set(key, account);
     }
   }
-  const debtors = data.guests
-    .map((g) => ({
-      id: g.id,
-      name: g.name,
-      due: guestTotals(data.lines, data.payments, g.id, g.round).due,
-    }))
-    .filter((g) => g.due > 0)
-    .sort((a, b) => b.due - a.due || a.name.localeCompare(b.name, "tr"));
+  const debtors: Summary["debtors"] = [];
+  const settled: Summary["settled"] = [];
+  const overpaid: Summary["overpaid"] = [];
+  for (const g of data.guests) {
+    const overall = guestTotals(data.lines, data.payments, g.id);
+    if (overall.due < 0)
+      overpaid.push({ id: g.id, name: g.name, amount: -overall.due });
+    const round = guestTotals(data.lines, data.payments, g.id, g.round);
+    if (!hasActivity(round)) continue;
+    if (tabStatus(round) === "open")
+      debtors.push({ id: g.id, name: g.name, due: round.due });
+    else
+      settled.push({
+        id: g.id,
+        name: g.name,
+        paid: guestTotals([], data.payments, g.id).paid,
+      });
+  }
+  debtors.sort((a, b) => b.due - a.due || a.name.localeCompare(b.name, "tr"));
+  settled.sort((a, b) => b.paid - a.paid || a.name.localeCompare(b.name, "tr"));
+  overpaid.sort((a, b) => b.amount - a.amount || a.name.localeCompare(b.name, "tr"));
   return {
     total,
     gross,
     discount,
     complimentary,
     paid,
-    due: total - paid,
+    due: debtors.reduce((sum, g) => sum + g.due, 0),
     byMethod,
     byStation,
     byItem: [...items.values()].sort(
@@ -317,6 +335,8 @@ export function summarize(
     ),
     byAccount: [...accounts.values()].sort((a, b) => b.amount - a.amount),
     debtors,
+    settled,
+    overpaid,
   };
 }
 
@@ -416,16 +436,23 @@ export function buildCsv(
   return rows.map((row) => row.map(csvCell).join(";")).join("\r\n") + "\r\n";
 }
 
-export type GuestRow = TabGuest & Totals & { active: boolean };
+export type GuestRow = TabGuest &
+  Totals & {
+    active: boolean;
+    /** Owes money, paid everything, or nothing entered yet. */
+    state: TabStatus | "unopened";
+    /** Everything this guest has paid, earlier rounds included. */
+    paidTotal: number;
+  };
 
 /** A tab counts as opened once something was entered in its current round. */
 export const hasActivity = (t: Pick<Totals, "count" | "paid">) =>
   t.count > 0 || t.paid > 0;
 
 /**
- * "Açık": open tabs with activity. "Kapalı": closed tabs. "Hepsi": everyone,
- * including guests whose tab was never opened. A search always looks through
- * everyone so a new tab can be opened from the list.
+ * "Açık": guests who owe money. "Kapalı": guests who paid everything.
+ * "Hepsi": everyone, including guests whose tab was never opened. A search
+ * always looks through everyone so a new tab can be opened from the list.
  */
 export function guestRows(
   data: Pick<TabData, "guests" | "lines" | "payments">,
@@ -434,14 +461,21 @@ export function guestRows(
 ): GuestRow[] {
   const rows = data.guests.map((g) => {
     const totals = guestTotals(data.lines, data.payments, g.id, g.round);
-    return { ...g, ...totals, active: hasActivity(totals) };
+    const active = hasActivity(totals);
+    return {
+      ...g,
+      ...totals,
+      active,
+      state: active ? tabStatus(totals) : ("unopened" as const),
+      paidTotal: guestTotals([], data.payments, g.id).paid,
+    };
   });
   const searching = query.trim().length > 0;
   return sortByName(
     rows.filter((g) => {
       if (searching) return matchesSearch(g.name, query);
-      if (filter === "open") return g.status === "open" && g.active;
-      if (filter === "closed") return g.status === "closed";
+      if (filter === "open") return g.state === "open";
+      if (filter === "closed") return g.state === "closed";
       return true;
     }),
   );
@@ -507,9 +541,28 @@ export function describeAudit(entry: Pick<AuditEntry, "action" | "record" | "gue
   if (entry.action === "guest.discount")
     return `${guest}: indirim %${num("discountPercent")}`;
   if (entry.action === "line.delete")
-    return `${guest}: ${String(r.name ?? "kalem")} ${num("qty") > 1 ? `×${num("qty")} ` : ""}· ${formatMoney(num("price") * (num("qty") || 1))}`;
+    return `${guest}: ürün silindi · ${String(r.name ?? "kalem")} ${num("qty") > 1 ? `×${num("qty")} ` : ""}· ${formatMoney(num("price") * (num("qty") || 1))}`;
   if (entry.action === "payment.delete")
-    return `${guest}: ${r.method === "iban" ? "IBAN" : r.method === "pos" ? "POS" : "Nakit"} ödemesi · ${formatMoney(num("amount"))}`;
+    return `${guest}: ödeme silindi · ${r.method === "iban" ? "IBAN" : r.method === "pos" ? "POS" : "Nakit"} · ${formatMoney(num("amount"))}`;
+  if (entry.action === "menu.create")
+    return `Menüye eklendi: ${str("name")} · ${formatMoney(num("price"))} (${str("station") === "pizza" ? "Yemek" : "Bar"})`;
+  if (entry.action === "menu.update") {
+    const from = (typeof r.from === "object" && r.from ? r.from : {}) as Record<string, unknown>;
+    const changes: string[] = [];
+    if (typeof from.price === "number" && from.price !== r.price)
+      changes.push(`fiyat ${formatMoney(from.price)} → ${formatMoney(num("price"))}`);
+    if (typeof from.active === "boolean" && from.active !== r.active)
+      changes.push(r.active ? "menüde tekrar açıldı" : "menüde gizlendi");
+    if (typeof from.name === "string" && from.name !== r.name)
+      changes.push(`eski adı ${from.name}`);
+    if (typeof from.station === "string" && from.station !== r.station)
+      changes.push(`bölüm ${str("station") === "pizza" ? "Yemek" : "Bar"}`);
+    return `Menü: ${str("name")} · ${changes.join(", ") || "güncellendi"}`;
+  }
+  if (entry.action === "menu.delete")
+    return `Menüden silindi: ${str("name")} · ${formatMoney(num("price"))}`;
+  if (entry.action === "account.delete")
+    return `IBAN silindi: ${str("label")}`;
   if (entry.action === "guest.delete") {
     const lines = Array.isArray(r.lines) ? r.lines.length : 0;
     const payments = Array.isArray(r.payments) ? r.payments.length : 0;
@@ -518,20 +571,23 @@ export function describeAudit(entry: Pick<AuditEntry, "action" | "record" | "gue
   return `${guest}: ${entry.action}`;
 }
 
-/** Headline for the list: how many tabs are open and how much is still owed. */
+/** Headline for the list: how many guests owe money, how many paid everything. */
 export function openSummary(
   data: Pick<TabData, "guests" | "lines" | "payments">,
 ) {
   let open = 0;
+  let closed = 0;
   let due = 0;
   for (const g of data.guests) {
-    if (g.status !== "open") continue;
     const t = guestTotals(data.lines, data.payments, g.id, g.round);
     if (!hasActivity(t)) continue;
-    open += 1;
-    due += Math.max(0, t.due);
+    if (tabStatus(t) === "closed") closed += 1;
+    else {
+      open += 1;
+      due += t.due;
+    }
   }
-  return { open, due };
+  return { open, closed, due };
 }
 
 /** Message a guest can settle later: name, balance and the IBAN text. */

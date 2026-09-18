@@ -263,8 +263,24 @@
   white-space: nowrap;
   color: #435431;
 }
+.tab-due {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.1;
+}
+.tab-due small {
+  font:
+    11px var(--font-poppins),
+    sans-serif;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+}
 .tab-due.owe {
   color: #8a4a1f;
+}
+.tab-due.paid {
+  color: #4d6436;
 }
 .tab-due.zero,
 .tab-totals .zero strong,
@@ -327,6 +343,19 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 10px;
+}
+.tab-menu-add {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+.tab-menu-add form {
+  display: grid;
+  gap: 10px;
+}
+.tab-menu-add .tab-row input {
+  flex: 1 1 120px;
+  min-width: 0;
 }
 .tab-menu-item {
   display: grid;

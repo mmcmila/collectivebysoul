@@ -14,7 +14,7 @@ async function action(name,args,cookie=''){
 }
 const uuid=body=>body.match(/"id":"([a-f0-9-]{36})"/)?.[1];
 const sql=postgres(process.env.POSTGRES_URL,{ssl:'require',max:1});const hash=x=>createHash('sha256').update(x).digest('hex');
-const tag=randomUUID().slice(0,8);const created={admins:[],guests:[],accounts:[],tickets:[]};
+const tag=randomUUID().slice(0,8);const created={admins:[],guests:[],accounts:[],tickets:[]};const testItem='TEST ürün '+tag;
 async function staff(role){
  const [a]=await sql`INSERT INTO guest_event.admins(name,code_hash,role) VALUES(${'TEST '+role+' '+tag},${hash(randomBytes(16).toString('hex'))},${role}) RETURNING id`;
  const token=randomBytes(32).toString('hex');
@@ -28,8 +28,21 @@ try{
  // Bar staff see the module but never the organiser console or admin-only actions.
  const barData=await action('getTabData',[],bar.cookie);assert.ok(barData.body.includes('"menu"'));assert.ok((await action('getStaffAccounts',[],bar.cookie)).body.includes('yönetici yetkisi'),'staff codes are admin only');
  assert.ok(!(await action('getAdminData',[],bar.cookie)).body.includes('"workshops"'),'bar must not read the organiser console');
- for(const [name,args] of [['saveMenu',[[]]],['saveBankAccounts',[[]]],['addTabGuestsBulk',['TEST']],['createStaffAccount',['TEST x','bar']]])
+ for(const [name,args] of [['saveBankAccounts',[[]]],['addTabGuestsBulk',['TEST']],['createStaffAccount',['TEST x','bar']]])
   assert.ok((await action(name,args,bar.cookie)).body.includes('yönetici yetkisi'),name+' must be admin only');
+ // Staff manage the menu: add a product, change its price, hide it when it runs out. Every change is logged; deleting for good is admin only.
+ assert.ok((await action('addMenuItem',[testItem,35000,'pizza'],bar.cookie)).body.includes('"ok":true'),'bar staff can add a menu item');
+ const [added]=await sql`SELECT price,station,active FROM guest_event.menu_items WHERE name=${testItem}`;assert.equal(added.station,'bar','staff add to their own station');assert.equal(added.price,35000);assert.equal(added.active,true);
+ assert.ok((await action('addMenuItem',[testItem.toUpperCase(),100,'bar'],pizza.cookie)).body.includes('zaten var'),'duplicates are refused');
+ assert.ok((await action('addMenuItem',['TEST x',-5,'bar'],bar.cookie)).body.includes('Fiyatı kontrol et'));
+ assert.ok((await action('addMenuItem',['TEST anon',100,'bar'])).body.includes('Oturumun sona erdi'));
+ const [menuLog]=await sql`SELECT actor_name FROM guest_event.tab_audit WHERE action='menu.create' AND record->>'name'=${testItem}`;assert.equal(menuLog.actor_name,'TEST bar '+tag,'the addition is logged');
+ const [itemRow]=await sql`SELECT id FROM guest_event.menu_items WHERE name=${testItem}`;
+ assert.ok((await action('saveMenu',[[{id:itemRow.id,name:testItem,price:42000,station:'bar',active:false}]],pizza.cookie)).body.includes('"ok":true'),'staff can change a price and hide a product');
+ const [edited]=await sql`SELECT price,active FROM guest_event.menu_items WHERE id=${itemRow.id}`;assert.equal(edited.price,42000);assert.equal(edited.active,false,'a hidden product stays in the table');
+ const [editLog]=await sql`SELECT actor_name,record FROM guest_event.tab_audit WHERE action='menu.update' AND record->>'name'=${testItem}`;assert.equal(editLog.actor_name,'TEST pizza '+tag);assert.equal(editLog.record.from.price,35000,'the log keeps the old price');
+ assert.ok((await action('deleteMenuItem',[itemRow.id],bar.cookie)).body.includes('yönetici yetkisi'),'deleting a product for good is admin only');
+ assert.ok((await action('saveMenu',[[]])).body.includes('Oturumun sona erdi'));
  // Guest and lines.
  // Readable staff codes: created, listed, renewed, and usable for login.
  const createdStaff=await action('createStaffAccount',['TEST kod '+tag,'pizza'],admin.cookie);const code=createdStaff.body.match(/"code":"([A-Z2-9]{3}-[A-Z2-9]{3})"/)?.[1];assert.ok(code,'staff code is created');
@@ -46,6 +59,7 @@ try{
  const issued=await action('issueGuest',['TEST bilet '+tag,true,randomUUID(),'team'],admin.cookie);const ticketId=uuid(issued.body);assert.ok(ticketId,'ticket issued');created.tickets.push(ticketId);
  const [autoTab]=await sql`SELECT id,name FROM guest_event.tab_guests WHERE ticket_id=${ticketId}`;assert.equal(autoTab?.name,'TEST bilet '+tag,'issued participant has a tab');created.guests.push(autoTab.id);
  const guest=uuid((await action('addTabGuest',['TEST misafir '+tag],bar.cookie)).body);assert.ok(guest);created.guests.push(guest);
+ assert.ok((await action('addTabLine',[guest,itemRow.id],bar.cookie)).body.includes('artık menüde yok'),'a hidden product cannot be added to a tab');
  const [bira]=await sql`SELECT id,name,price FROM guest_event.menu_items WHERE active AND station='bar' ORDER BY sort_order LIMIT 1`;
  const [pizzaItem]=await sql`SELECT id,price FROM guest_event.menu_items WHERE active AND station='pizza' ORDER BY sort_order LIMIT 1`;
  assert.ok(bira&&pizzaItem,'seed menu required');
@@ -61,7 +75,6 @@ try{
  const [audit]=await sql`SELECT count(*)::int AS n FROM guest_event.tab_audit WHERE action='line.delete' AND guest_id=${guest}`;assert.equal(audit.n,2,'deletions are logged');
  // Close rules.
  const total=bira.price;
- assert.ok((await action('closeTabGuest',[guest],bar.cookie)).body.includes('Kalan borç varken'));
  const partial=await action('addTabPayment',[guest,100,'pos'],bar.cookie);assert.ok(partial.body.includes('"status":"open"'));
  // IBAN payments must say which account they went to.
  assert.ok((await action('addTabPayment',[guest,null,'iban',null],pizza.cookie)).body.includes('Hangi IBAN'));
@@ -108,15 +121,16 @@ try{
  assert.ok((await action('clearAudit',[],bar.cookie)).body.includes('yönetici yetkisi'),'clearing the log is admin only');
  assert.ok((await action('deleteAuditEntry',[entry.id],admin.cookie)).body.includes('"ok":true'));
  const [logGone]=await sql`SELECT count(*)::int AS n FROM guest_event.tab_audit WHERE id=${entry.id}`;assert.equal(logGone.n,0,'the organiser can delete a log entry');
- // Current round: close with cash; only the payer or an admin may delete it, and deleting it reopens the tab.
+ // Current round: paying the balance closes the tab; any staff member may delete the payment, which reopens it.
  const closing=await action('addTabPayment',[guest,null,'cash',null],bar.cookie);assert.ok(closing.body.includes('"status":"closed"'));
- const cashPayment=uuid(closing.body);assert.ok((await action('deleteTabPayment',[cashPayment],pizza.cookie)).body.includes('Sadece ödemeyi alan'));
- assert.ok((await action('deleteTabPayment',[cashPayment],bar.cookie)).body.includes('"ok":true'));
+ const cashPayment=uuid(closing.body);assert.ok((await action('deleteTabPayment',[cashPayment],pizza.cookie)).body.includes('"ok":true'),'any staff member may delete a wrongly entered payment');
+ const [payLog]=await sql`SELECT actor_name FROM guest_event.tab_audit WHERE guest_id=${guest} AND action='payment.delete' ORDER BY created_at DESC LIMIT 1`;assert.equal(payLog.actor_name,'TEST pizza '+tag,'the deletion is logged with who did it');
  const [after]=await sql`SELECT status,round FROM guest_event.tab_guests WHERE id=${guest}`;assert.equal(after.status,'open','removing a payment that leaves a balance reopens the tab');assert.equal(after.round,2,'reopening by payment removal stays in the same round');
  assert.ok((await action('deleteTabGuest',[guest],admin.cookie)).body.includes('"ok":true'));
  const [gone]=await sql`SELECT count(*)::int AS n FROM guest_event.tab_lines WHERE guest_id=${guest}`;assert.equal(gone.n,0);
  console.log('PASS: anonymous denied, bar/pizza limited to the module, admin-only settings, readable staff codes (create/list/login/renew), new row per add with price snapshot, owner/admin deletion with audit log, close/reopen rules.');
 }finally{
+ await sql`DELETE FROM guest_event.menu_items WHERE name=${testItem}`;
  for(const g of created.guests)await sql`DELETE FROM guest_event.tab_guests WHERE id=${g}`;
  for(const a of created.accounts)await sql`DELETE FROM guest_event.bank_accounts WHERE id=${a}`;
  for(const t of created.tickets)await sql`DELETE FROM guest_event.tickets WHERE id=${t}`;

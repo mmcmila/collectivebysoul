@@ -5,9 +5,8 @@ import { effectiveDiscount } from "../lib/tab/types.ts";
 import {
   balanceMessage,
   buildCsv,
-  canClose,
   describeAudit,
-  canDeleteLine,
+  canDeleteEntry,
   canDeleteRecord,
   formatMoney,
   guestRows,
@@ -18,9 +17,7 @@ import {
   pastRounds,
   resolvePaymentAmount,
   startsNewRound,
-  statusAfterLine,
-  statusAfterPayment,
-  statusAfterPaymentRemoved,
+  tabStatus,
   summarize,
 } from "../lib/tab/calc.ts";
 
@@ -77,36 +74,29 @@ test("effective discount: personal override beats personal rule beats type rule"
   assert.deepEqual(effectiveDiscount({ id: "c", category: null, discountOverride: 15 }, rules).percent, 15);
 });
 
-test("a payment closes the tab only when closing was requested and nothing is left", () => {
-  assert.equal(statusAfterPayment(0), "closed", "nothing owed closes the tab");
-  assert.equal(statusAfterPayment(-500), "closed");
-  assert.equal(statusAfterPayment(100), "open", "a balance keeps the tab open");
-  assert.equal(startsNewRound("closed", { count: 2, paid: 500, due: 0 }), true);
-  assert.equal(startsNewRound("open", { count: 2, paid: 500, due: 0 }), true, "a fully paid open tab also starts a new round");
-  assert.equal(startsNewRound("open", { count: 2, paid: 100, due: 400 }), false);
-  assert.equal(startsNewRound("open", { count: 1, paid: 0, due: 0 }), false, "complimentary-only open tab stays in its round");
-  assert.equal(startsNewRound("closed", { count: 0, paid: 0, due: 0 }), false);
-  assert.equal(startsNewRound("closed", { count: 1, paid: 900, due: -400 }), false, "credit is used by the next order");
+test("open and closed follow the balance: owed = open, everything paid = closed", () => {
+  assert.equal(tabStatus({ count: 2, paid: 500, due: 0 }), "closed", "nothing owed closes the tab");
+  assert.equal(tabStatus({ count: 1, paid: 900, due: -400 }), "closed");
+  assert.equal(tabStatus({ count: 2, paid: 100, due: 400 }), "open", "a balance keeps the tab open");
+  assert.equal(tabStatus({ count: 1, paid: 0, due: 300 }), "open");
+  assert.equal(tabStatus({ count: 0, paid: 0, due: 0 }), "open", "a tab nobody used is not closed, it was never opened");
 });
 
-test("adding a line always reopens; removing a payment reopens only when a balance remains", () => {
-  assert.equal(statusAfterLine(), "open");
-  assert.equal(statusAfterPaymentRemoved("closed", 20000), "open");
-  assert.equal(statusAfterPaymentRemoved("closed", 0), "closed");
-  assert.equal(statusAfterPaymentRemoved("open", 0), "open");
-});
-
-test("manual close is only allowed on an open tab with nothing owed", () => {
-  assert.equal(canClose("open", 0), true);
-  assert.equal(canClose("open", -100), true);
-  assert.equal(canClose("open", 1), false);
-  assert.equal(canClose("closed", 0), false);
+test("a new order on a fully paid round starts the next round", () => {
+  assert.equal(startsNewRound({ count: 2, paid: 500, due: 0 }), true);
+  assert.equal(startsNewRound({ count: 2, paid: 100, due: 400 }), false);
+  assert.equal(startsNewRound({ count: 1, paid: 0, due: 0 }), false, "a complimentary-only tab stays in its round");
+  assert.equal(startsNewRound({ count: 0, paid: 0, due: 0 }), false);
+  assert.equal(startsNewRound({ count: 1, paid: 900, due: -400 }), false, "credit is used by the next order");
 });
 
 test("empty payment amount takes the whole balance; invalid amounts are refused", () => {
   assert.deepEqual(resolvePaymentAmount(null, 35000), { amount: 35000 });
   assert.deepEqual(resolvePaymentAmount(10000, 35000), { amount: 10000 });
   assert.ok("error" in resolvePaymentAmount(null, 0));
+  assert.ok("error" in resolvePaymentAmount(500, 0), "nothing owed, nothing to pay");
+  assert.ok("error" in resolvePaymentAmount(35001, 35000), "more than the balance is refused");
+  assert.deepEqual(resolvePaymentAmount(35000, 35000), { amount: 35000 });
   assert.ok("error" in resolvePaymentAmount(0, 35000));
   assert.ok("error" in resolvePaymentAmount(-5, 35000));
   assert.ok("error" in resolvePaymentAmount(12.5, 35000));
@@ -147,7 +137,12 @@ test("guest rows: Açık shows only opened tabs, Hepsi everyone, search looks th
   assert.deepEqual(guestRows(data, "closed", "").map((g) => g.id), ["b"]);
   assert.deepEqual(guestRows(data, "open", "zeynep").map((g) => g.id), ["c"], "search ignores the filter");
   assert.equal(guestRows(data, "all", "sule")[0].due, 35000);
-  assert.equal(guestRows(data, "all", "").find((g) => g.id === "c").active, false);
+  assert.equal(guestRows(data, "all", "").find((g) => g.id === "c").state, "unopened");
+  // The stored status is ignored: a fully paid tab is closed, a tab with a balance is open.
+  const stale = { guests: [{ ...guests[0], status: "closed" }, { ...guests[1], status: "open" }], lines, payments };
+  assert.deepEqual(guestRows(stale, "open", "").map((g) => g.id), ["a"]);
+  assert.deepEqual(guestRows(stale, "closed", "").map((g) => g.id), ["b"]);
+  assert.equal(guestRows(data, "closed", "")[0].paidTotal, 40000, "closed rows show everything the guest paid");
 });
 
 test("rounds: totals follow the current round and closed rounds become history", () => {
@@ -163,7 +158,7 @@ test("rounds: totals follow the current round and closed rounds become history",
   assert.equal(history[0].totals.paid, 40000);
   assert.equal(history[0].lines.length, 1);
   assert.equal(guestTotals(round2Lines, payments, "b").total, 80000, "without a round, all rounds are summed (summary/CSV)");
-  assert.deepEqual(openSummary({ guests: [guests[0], reopened], lines: round2Lines, payments }), { open: 2, due: 75000 });
+  assert.deepEqual(openSummary({ guests: [guests[0], reopened], lines: round2Lines, payments }), { open: 2, closed: 0, due: 75000 });
 });
 
 test("only the person who entered a record or an admin may delete it", () => {
@@ -175,8 +170,8 @@ test("only the person who entered a record or an admin may delete it", () => {
 });
 
 test("any staff member may delete a wrongly entered line", () => {
-  for (const role of ["admin", "bar", "pizza"]) assert.ok(canDeleteLine({ role }));
-  assert.ok(!canDeleteLine({ role: "guest" }));
+  for (const role of ["admin", "bar", "pizza"]) assert.ok(canDeleteEntry({ role }));
+  assert.ok(!canDeleteEntry({ role: "guest" }));
 });
 
 test("summary groups by method, station and item, and lists debtors", () => {
@@ -199,6 +194,12 @@ test("summary groups by method, station and item, and lists debtors", () => {
   assert.equal(discounted.total, 72500);
   assert.equal(discounted.debtors[0].due, 2500);
   assert.deepEqual(s.debtors, [{ id: "a", name: "Şule Çınar", due: 35000 }]);
+  assert.deepEqual(s.settled, [{ id: "b", name: "Ali Işık", paid: 40000 }], "closed tabs list what the guest paid");
+  assert.deepEqual(s.overpaid, []);
+  // A product deleted after it was paid: the money shows up as overpaid, "Açık" stays what is really owed.
+  const refund = summarize({ guests, lines: lines.filter((l) => l.guestId !== "b"), payments });
+  assert.deepEqual(refund.overpaid, [{ id: "b", name: "Ali Işık", amount: 40000 }]);
+  assert.equal(refund.due, 35000, "open balance is never reduced by someone else's overpayment");
   assert.deepEqual(summarize({ guests, lines, payments, accounts }).byAccount, [
     { id: "acc-1", label: "Merve", iban: "TR00 1", amount: 40000, count: 1 },
     { id: "acc-2", label: "Can", iban: "TR00 2", amount: 0, count: 0 },
@@ -220,19 +221,26 @@ test("CSV uses semicolons, decimal commas, and one row per line and payment", ()
 });
 
 test("open summary counts opened tabs only and the balance still owed", () => {
-  assert.deepEqual(openSummary({ guests, lines, payments }), { open: 1, due: 35000 });
-  assert.deepEqual(openSummary({ guests: [{ ...guests[0], id: "idle", name: "Boş" }], lines: [], payments: [] }), { open: 0, due: 0 });
+  assert.deepEqual(openSummary({ guests, lines, payments }), { open: 1, closed: 1, due: 35000 });
+  assert.deepEqual(openSummary({ guests: [{ ...guests[0], id: "idle", name: "Boş" }], lines: [], payments: [] }), { open: 0, closed: 0, due: 0 });
 });
 
 test("deletion log entries read as short Turkish sentences", () => {
   assert.equal(
     describeAudit({ action: "line.delete", guestName: "Şule Çınar", record: { name: "Bira", price: 20000, qty: 2 } }),
-    "Şule Çınar: Bira ×2 · 400 ₺",
+    "Şule Çınar: ürün silindi · Bira ×2 · 400 ₺",
   );
   assert.equal(
     describeAudit({ action: "payment.delete", guestName: null, record: { amount: 1250, method: "iban" } }),
-    "Silinmiş misafir: IBAN ödemesi · 12,50 ₺",
+    "Silinmiş misafir: ödeme silindi · IBAN · 12,50 ₺",
   );
+  assert.equal(describeAudit({ action: "menu.create", guestName: null, record: { name: "Ayran", price: 8000, station: "pizza" } }), "Menüye eklendi: Ayran · 80 ₺ (Yemek)");
+  assert.equal(
+    describeAudit({ action: "menu.update", guestName: null, record: { name: "Bira", price: 35000, active: false, station: "bar", from: { name: "Bira", price: 30000, active: true, station: "bar" } } }),
+    "Menü: Bira · fiyat 300 ₺ → 350 ₺, menüde gizlendi",
+  );
+  assert.equal(describeAudit({ action: "menu.delete", guestName: null, record: { name: "Shot", price: 35000 } }), "Menüden silindi: Shot · 350 ₺");
+  assert.equal(describeAudit({ action: "account.delete", guestName: null, record: { label: "Organizatör" } }), "IBAN silindi: Organizatör");
   assert.equal(
     describeAudit({ action: "guest.delete", guestName: "Ali", record: { lines: [{}, {}], payments: [] } }),
     "Ali: misafir silindi (2 kalem, 0 ödeme)",

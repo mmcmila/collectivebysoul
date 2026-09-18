@@ -15,10 +15,11 @@ import {
 } from "@/lib/tab/types";
 import { TabGuestDetail } from "@/components/tab-guest-detail";
 import { TabGuestList } from "@/components/tab-guest-list";
+import { TabMenuEditor } from "@/components/tab-menu-editor";
 import { TabSettings } from "@/components/tab-settings";
 import { TabSummary } from "@/components/tab-summary";
 
-type View = "list" | "summary" | "settings";
+type View = "list" | "summary" | "menu" | "settings";
 export type ToastAction = { label: string; run: () => void };
 export type Notify = (
   text: string,
@@ -160,6 +161,15 @@ export function TabModule({
         >
           Özet
         </button>
+        {/* Staff manage the menu here; the organiser has it under Ayarlar. */}
+        {!isAdmin && (
+          <button
+            aria-current={view === "menu" ? "page" : undefined}
+            onClick={() => showView("menu")}
+          >
+            Menü
+          </button>
+        )}
         {isAdmin && (
           <button
             aria-current={view === "settings" ? "page" : undefined}
@@ -214,6 +224,19 @@ export function TabModule({
         )}
         {view === "summary" && (
           <TabSummary data={data} refresh={refresh} notify={notify} />
+        )}
+        {view === "menu" && !isAdmin && (
+          <section aria-labelledby="tab-menu-title">
+            <h1 id="tab-menu-title" className="tab-title">
+              Menü
+            </h1>
+            <TabMenuEditor
+              data={data}
+              refresh={refresh}
+              notify={notify}
+              defaultOpen
+            />
+          </section>
         )}
         {view === "settings" && isAdmin && (
           <TabSettings
