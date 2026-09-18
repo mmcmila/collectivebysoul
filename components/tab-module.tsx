@@ -210,7 +210,9 @@ export function TabModule({
             notify={notify}
           />
         )}
-        {view === "summary" && <TabSummary data={data} />}
+        {view === "summary" && (
+          <TabSummary data={data} refresh={refresh} notify={notify} />
+        )}
         {view === "settings" && isAdmin && (
           <TabSettings
             data={data}

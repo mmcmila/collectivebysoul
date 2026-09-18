@@ -158,6 +158,9 @@
   color: #9c4728;
   font-size: 14px;
 }
+.tab-card .tab-danger {
+  margin-top: 14px;
+}
 .tab-back {
   border: 0;
   background: none;
