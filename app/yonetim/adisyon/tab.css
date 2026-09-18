@@ -161,6 +161,45 @@
 .tab-card .tab-danger {
   margin-top: 14px;
 }
+.tab-summary-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.tab-summary-filter .tab-chips {
+  margin: 0;
+  align-items: center;
+}
+.tab-summary-filter input[type="date"],
+.tab-summary-filter select {
+  min-height: 44px;
+  border: 1px solid #d9ddcb;
+  border-radius: 999px;
+  background: #fffefa;
+  color: inherit;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 14px;
+}
+.tab-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: #435431;
+  text-decoration: underline;
+  font: inherit;
+}
+.tab-reset {
+  margin-top: 28px;
+  border-color: #e6cfc3;
+}
+.tab-reset .tab-danger {
+  margin-top: 0;
+  flex: 1 1 160px;
+  width: auto;
+}
 .tab-back {
   border: 0;
   background: none;

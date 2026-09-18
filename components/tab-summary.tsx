@@ -1,22 +1,72 @@
 "use client";
 import { confirmAction } from "@/components/confirm-dialog";
 import { useState } from "react";
-import { clearAudit, deleteAuditEntry } from "@/app/yonetim/adisyon/actions";
+import {
+  clearAudit,
+  deleteAuditEntry,
+  resetTabData,
+} from "@/app/yonetim/adisyon/actions";
 import type { Notify } from "@/components/tab-module";
-import { describeAudit, formatMoney, formatTime, summarize } from "@/lib/tab/calc";
+import {
+  businessDay,
+  describeAudit,
+  filterEntries,
+  formatDateTime,
+  formatMoney,
+  summarize,
+} from "@/lib/tab/calc";
 import { paymentMethods, stations, type TabData } from "@/lib/tab/types";
 
 export function TabSummary({
   data,
+  isAdmin,
   refresh,
   notify,
 }: {
   data: TabData;
+  isAdmin: boolean;
   refresh: () => Promise<void>;
   notify: Notify;
 }) {
-  const s = summarize(data);
+  // Filter: one business day (06:00–06:00) and/or one staff member.
+  const [day, setDay] = useState<string | null>(null);
+  const [staff, setStaff] = useState<string | null>(null);
+  const today = businessDay(data.fetchedAt);
+  const filtered = day !== null || staff !== null;
+  const staffNames = [
+    ...new Set(
+      [...data.lines, ...data.payments]
+        .map((x) => x.createdByName)
+        .filter(Boolean),
+    ),
+  ].sort((a, b) => a.localeCompare(b, "tr"));
+  // Sales figures follow the filter; who owes or paid is always the current state.
+  const s = summarize({
+    ...data,
+    lines: filterEntries(data.lines, { day, staff }),
+    payments: filterEntries(data.payments, { day, staff }),
+  });
+  const state = filtered ? summarize(data) : s;
+  const audit = data.audit.filter(
+    (entry) =>
+      (!day || businessDay(entry.createdAt) === day) &&
+      (!staff || entry.actorName === staff),
+  );
   const [busy, setBusy] = useState(false);
+  const [resetWord, setResetWord] = useState("");
+  const reset = async () => {
+    setBusy(true);
+    const r = await resetTabData(resetWord).catch(() => ({
+      error: "Bağlantı yok. Sıfırlanmadı.",
+    }));
+    setBusy(false);
+    if (r.error) return notify(r.error, "error");
+    setResetWord("");
+    setDay(null);
+    setStaff(null);
+    notify("Adisyon sıfırlandı");
+    await refresh();
+  };
   // The activity log is only sent to the organiser, who may also clean it up.
   const cleanAudit = async (
     run: () => Promise<{ error?: string }>,
@@ -36,6 +86,71 @@ export function TabSummary({
       <h1 id="tab-summary-title" className="tab-title">
         Özet
       </h1>
+      <div className="tab-summary-filter" role="group" aria-label="Özet filtresi">
+        <div className="tab-chips">
+          <button
+            className="tab-chip"
+            aria-pressed={day === null}
+            onClick={() => setDay(null)}
+          >
+            Tüm günler
+          </button>
+          <button
+            className="tab-chip"
+            aria-pressed={day === today}
+            onClick={() => setDay(today)}
+          >
+            Bugün
+          </button>
+          <label className="tab-visually-hidden" htmlFor="tab-summary-day">
+            Gün seç
+          </label>
+          <input
+            id="tab-summary-day"
+            type="date"
+            value={day ?? ""}
+            max={today}
+            onChange={(e) => setDay(e.target.value || null)}
+          />
+        </div>
+        {staffNames.length > 0 && (
+          <>
+            <label className="tab-visually-hidden" htmlFor="tab-summary-staff">
+              Personel
+            </label>
+            <select
+              id="tab-summary-staff"
+              value={staff ?? ""}
+              onChange={(e) => setStaff(e.target.value || null)}
+            >
+              <option value="">Tüm personel</option>
+              {staffNames.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+      </div>
+      {filtered && (
+        <p className="ad-note">
+          Filtre açık: satış, tahsilat ve ürünler seçilen{" "}
+          {day && staff ? "gün ve personele" : day ? "güne" : "personele"} göre.
+          Gün 06:00’da başlar; gece yarısından sonraki satışlar aynı geceye
+          sayılır. Borç ve ödeyen listeleri her zaman güncel durumu gösterir.{" "}
+          <button
+            type="button"
+            className="tab-link"
+            onClick={() => {
+              setDay(null);
+              setStaff(null);
+            }}
+          >
+            Filtreyi kaldır
+          </button>
+        </p>
+      )}
       <div className="tab-totals">
         <div>
           <span>Satış</span>
@@ -52,9 +167,9 @@ export function TabSummary({
           <span>Tahsil</span>
           <strong>{formatMoney(s.paid)}</strong>
         </div>
-        <div className={s.due > 0 ? "owe" : "zero"}>
+        <div className={state.due > 0 ? "owe" : "zero"}>
           <span>Açık</span>
-          <strong>{formatMoney(s.due)}</strong>
+          <strong>{formatMoney(state.due)}</strong>
         </div>
       </div>
       <div className="tab-summary-grid">
@@ -143,11 +258,11 @@ export function TabSummary({
         )}
       </section>
       <section className="tab-card" aria-labelledby="tab-debtors">
-        <h2 id="tab-debtors">Açık hesaplar · borcu olanlar ({s.debtors.length})</h2>
-        {s.debtors.length ? (
+        <h2 id="tab-debtors">Açık hesaplar · borcu olanlar ({state.debtors.length})</h2>
+        {state.debtors.length ? (
           <table className="tab-table">
             <tbody>
-              {s.debtors.map((g) => (
+              {state.debtors.map((g) => (
                 <tr key={g.id}>
                   <th scope="row">{g.name}</th>
                   <td className="owe">{formatMoney(g.due)}</td>
@@ -159,9 +274,9 @@ export function TabSummary({
           <p className="ad-note">Açık borç yok.</p>
         )}
       </section>
-      {s.overpaid.length > 0 && (
+      {state.overpaid.length > 0 && (
         <section className="tab-card" aria-labelledby="tab-overpaid">
-          <h2 id="tab-overpaid">Fazla ödeme · iade gerekebilir ({s.overpaid.length})</h2>
+          <h2 id="tab-overpaid">Fazla ödeme · iade gerekebilir ({state.overpaid.length})</h2>
           <p className="ad-note">
             Bu misafirlerden siparişlerinin tutarından fazla para alınmış
             görünüyor; genelde ödeme alındıktan sonra ürün silinince olur.
@@ -170,7 +285,7 @@ export function TabSummary({
           </p>
           <table className="tab-table">
             <tbody>
-              {s.overpaid.map((g) => (
+              {state.overpaid.map((g) => (
                 <tr key={g.id}>
                   <th scope="row">{g.name}</th>
                   <td className="owe">{formatMoney(g.amount)}</td>
@@ -181,11 +296,11 @@ export function TabSummary({
         </section>
       )}
       <section className="tab-card" aria-labelledby="tab-settled">
-        <h2 id="tab-settled">Kapalı hesaplar · ödeyenler ({s.settled.length})</h2>
-        {s.settled.length ? (
+        <h2 id="tab-settled">Kapalı hesaplar · ödeyenler ({state.settled.length})</h2>
+        {state.settled.length ? (
           <table className="tab-table">
             <tbody>
-              {s.settled.map((g) => (
+              {state.settled.map((g) => (
                 <tr key={g.id}>
                   <th scope="row">{g.name}</th>
                   <td>{formatMoney(g.paid)}</td>
@@ -206,13 +321,16 @@ export function TabSummary({
             işlem. Personel ürün ve ödeme silebilir ama bu kaydı yalnızca
             yönetici görür ve silebilir.
           </p>
+          {!audit.length && (
+            <p className="ad-note">Bu filtreye uyan işlem yok.</p>
+          )}
           <ul className="tab-lines tab-audit">
-            {data.audit.map((entry) => (
+            {audit.map((entry) => (
               <li key={entry.id}>
                 <span className="tab-line-main">
                   <span className="tab-line-name">{describeAudit(entry)}</span>
                   <span className="tab-line-sub">
-                    {formatTime(entry.createdAt)} · {entry.actorName}
+                    {formatDateTime(entry.createdAt)} · {entry.actorName}
                   </span>
                 </span>
                 <button
@@ -252,6 +370,45 @@ export function TabSummary({
         Tüm satışlar ve ödemeler tek dosyada; noktalı virgülle ayrılmış, Türkçe
         Excel’de doğrudan açılır.
       </p>
+      {isAdmin && (
+        <section className="tab-card tab-reset" aria-labelledby="tab-reset-title">
+          <h2 id="tab-reset-title">Adisyonu sıfırla</h2>
+          <p className="ad-note">
+            Test kayıtlarından sonra temiz başlamak için: bütün satışlar,
+            ödemeler ve işlem geçmişi silinir, Özet sıfırlanır, herkesin hesabı
+            “açılmadı”ya döner. Misafir listesi, menü, IBAN’lar, indirim
+            kuralları ve personel girişleri kalır. Geri alınamaz; gerekiyorsa
+            önce CSV indir. Etkinlik sırasında kullanma.
+          </p>
+          <form
+            className="tab-row"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void reset();
+            }}
+          >
+            <label className="tab-visually-hidden" htmlFor="tab-reset-word">
+              Onaylamak için SIFIRLA yaz
+            </label>
+            <input
+              id="tab-reset-word"
+              autoComplete="off"
+              autoCapitalize="characters"
+              placeholder="Onaylamak için SIFIRLA yaz"
+              value={resetWord}
+              onChange={(e) => setResetWord(e.target.value)}
+            />
+            <button
+              className="tab-danger"
+              disabled={
+                busy || resetWord.trim().toLocaleUpperCase("tr") !== "SIFIRLA"
+              }
+            >
+              {busy ? "Sıfırlanıyor…" : "Her şeyi sıfırla"}
+            </button>
+          </form>
+        </section>
+      )}
     </section>
   );
 }

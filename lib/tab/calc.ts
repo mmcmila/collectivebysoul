@@ -194,6 +194,28 @@ export const canDeleteRecord = (
 export const canAccessTabs = (role: StaffRole) =>
   role === "admin" || role === "bar" || role === "pizza";
 
+/**
+ * The day a sale belongs to, as YYYY-MM-DD in Istanbul time. A day runs from
+ * 06:00 to 06:00 so sales after midnight still count for the event night.
+ * (Istanbul is UTC+3 all year: 06:00 local = 03:00 UTC.)
+ */
+export const businessDay = (iso: string) =>
+  new Date(new Date(iso).getTime() - 3 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+
+/** Limits lines and payments to one business day and/or one staff member. */
+export function filterEntries<
+  T extends { createdAt: string; createdByName: string },
+>(entries: T[], filter: { day: string | null; staff: string | null }) {
+  if (!filter.day && !filter.staff) return entries;
+  return entries.filter(
+    (e) =>
+      (!filter.day || businessDay(e.createdAt) === filter.day) &&
+      (!filter.staff || e.createdByName === filter.staff),
+  );
+}
+
 export type Summary = {
   /** Net sales after complimentary lines and discounts. */
   total: number;
@@ -546,6 +568,8 @@ export function describeAudit(entry: Pick<AuditEntry, "action" | "record" | "gue
     return `${guest}: ödeme silindi · ${r.method === "iban" ? "IBAN" : r.method === "pos" ? "POS" : "Nakit"} · ${formatMoney(num("amount"))}`;
   if (entry.action === "menu.create")
     return `Menüye eklendi: ${str("name")} · ${formatMoney(num("price"))} (${str("station") === "pizza" ? "Yemek" : "Bar"})`;
+  if (entry.action === "data.reset")
+    return `Adisyon sıfırlandı: ${num("lines")} ürün (${formatMoney(num("sales"))}) ve ${num("payments")} ödeme (${formatMoney(num("paid"))}) silindi`;
   if (entry.action === "menu.update") {
     const from = (typeof r.from === "object" && r.from ? r.from : {}) as Record<string, unknown>;
     const changes: string[] = [];

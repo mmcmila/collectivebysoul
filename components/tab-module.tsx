@@ -223,7 +223,12 @@ export function TabModule({
           />
         )}
         {view === "summary" && (
-          <TabSummary data={data} refresh={refresh} notify={notify} />
+          <TabSummary
+            data={data}
+            isAdmin={isAdmin}
+            refresh={refresh}
+            notify={notify}
+          />
         )}
         {view === "menu" && !isAdmin && (
           <section aria-labelledby="tab-menu-title">
