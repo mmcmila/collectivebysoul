@@ -1,4 +1,5 @@
 "use client";
+import { confirmAction } from "@/components/confirm-dialog";
 import { useCallback, useEffect, useState } from "react";
 import {
   createStaffAccount,
@@ -159,11 +160,12 @@ export function StaffCodes() {
                   type="button"
                   className="ad-detail-button"
                   disabled={change.busy}
-                  onClick={() => {
+                  onClick={async () => {
                     if (
-                      !window.confirm(
+                      !(await confirmAction(
                         `${s.name} için yeni kod üretilsin mi? Eski kod çalışmaz.`,
-                      )
+                        "Yeni kod üret",
+                      ))
                     )
                       return;
                     void change.run(
@@ -182,12 +184,13 @@ export function StaffCodes() {
                   type="button"
                   className="ad-detail-button"
                   disabled={change.busy}
-                  onClick={() => {
+                  onClick={async () => {
                     if (
                       s.active &&
-                      !window.confirm(
+                      !(await confirmAction(
                         `${s.name} girişi kapatılsın mı? Açık oturumları sonlanır.`,
-                      )
+                        "Girişi kapat",
+                      ))
                     )
                       return;
                     void change.run(

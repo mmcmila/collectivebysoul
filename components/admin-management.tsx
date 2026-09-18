@@ -1,4 +1,5 @@
 "use client";
+import { confirmAction } from "@/components/confirm-dialog";
 import { useState } from "react";
 import {
   changeFortuneSchedule,
@@ -46,13 +47,14 @@ export function ParticipantControls({
       <button
         disabled={busy}
         className="ad-detail-button"
-        onClick={() => {
+        onClick={async () => {
           if (
             g.active &&
-            !window.confirm(
+            !(await confirmAction(
               g.name +
                 " listeden kaldırılsın mı? Giriş kodu kapanır ve rezervasyonları serbest kalır.",
-            )
+              "Listeden kaldır",
+            ))
           )
             return;
           void save(g.category, !g.active);
@@ -81,17 +83,18 @@ export function FortuneEditor({
   return (
     <form
       className="ad-slot-editor"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
         if (
           w.guests.length &&
           person !== w.guests[0].id &&
-          !window.confirm(
+          !(await confirmAction(
             slot +
               " saatindeki " +
               w.guests[0].name +
               " rezervasyonu kaldırılsın mı?",
-          )
+            "Kaldır",
+          ))
         )
           return;
         void run(
@@ -149,8 +152,8 @@ export function FortuneEditor({
         className="ad-remove-slot"
         disabled={busy || w.booked > 0}
         title={w.booked ? "Önce rezervasyonu taşı veya kaldır." : undefined}
-        onClick={() => {
-          if (!window.confirm(slot + " saati programdan çıkarılsın mı?"))
+        onClick={async () => {
+          if (!(await confirmAction(slot + " saati programdan çıkarılsın mı?", "Çıkar")))
             return;
           void run(
             "Saat kaldırılamadı.",

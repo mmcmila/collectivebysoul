@@ -1,4 +1,5 @@
 "use client";
+import { ConfirmHost } from "@/components/confirm-dialog";
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
@@ -130,6 +131,7 @@ export function TabModule({
 
   return (
     <div className="ad tab">
+      <ConfirmHost />
       <header className="ad-header tab-header">
         <Link href="/" className="ad-brand">
           <Image src="/assets/brand-mark.png" alt="" width={32} height={40} />

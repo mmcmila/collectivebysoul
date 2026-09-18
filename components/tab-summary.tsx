@@ -1,4 +1,5 @@
 "use client";
+import { confirmAction } from "@/components/confirm-dialog";
 import { useState } from "react";
 import { clearAudit, deleteAuditEntry } from "@/app/yonetim/adisyon/actions";
 import type { Notify } from "@/components/tab-module";
@@ -191,10 +192,11 @@ export function TabSummary({
           <button
             className="tab-danger"
             disabled={busy}
-            onClick={() => {
+            onClick={async () => {
               if (
-                window.confirm(
+                await confirmAction(
                   "Hareket kaydının tamamı silinsin mi? Eski kayıtlar dahil hepsi silinir; bu işlem geri alınamaz.",
+                  "Tamamını sil",
                 )
               )
                 void cleanAudit(clearAudit, "Hareket kaydı temizlendi");

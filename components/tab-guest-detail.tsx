@@ -1,4 +1,5 @@
 "use client";
+import { confirmAction } from "@/components/confirm-dialog";
 import { useState } from "react";
 import {
   addTabLine,
@@ -153,7 +154,7 @@ export function TabGuestDetail({
   };
 
   const removeLine = async (line: TabLine, confirm = true) => {
-    if (confirm && !window.confirm(`${line.name} silinsin mi?`)) return;
+    if (confirm && !(await confirmAction(`${line.name} silinsin mi?`))) return;
     mutate((d) => ({ ...d, lines: d.lines.filter((l) => l.id !== line.id) }));
     const r = await deleteTabLine(line.id).catch(
       (): Result => ({ error: OFFLINE }),
@@ -281,15 +282,16 @@ export function TabGuestDetail({
           : "İndirim kaldırıldı · yeni siparişler indirimsiz",
     );
   // Paid history is locked; only the organiser may remove entries from it.
-  const removeHistoryLine = (line: TabLine) => {
-    if (!window.confirm(`Ödenmiş geçmişten ${line.name} silinsin mi?`)) return;
+  const removeHistoryLine = async (line: TabLine) => {
+    if (!(await confirmAction(`Ödenmiş geçmişten ${line.name} silinsin mi?`)))
+      return;
     void simple(() => deleteTabLine(line.id), "Geçmişten silindi: " + line.name);
   };
-  const removeHistoryPayment = (payment: TabPayment) => {
+  const removeHistoryPayment = async (payment: TabPayment) => {
     if (
-      !window.confirm(
+      !(await confirmAction(
         `Ödenmiş geçmişten ${formatMoney(payment.amount)} ${paymentMethods[payment.method]} ödemesi silinsin mi?`,
-      )
+      ))
     )
       return;
     void simple(() => deleteTabPayment(payment.id), "Geçmişten ödeme silindi");
@@ -302,9 +304,9 @@ export function TabGuestDetail({
 
   const removePayment = async (payment: TabPayment) => {
     if (
-      !window.confirm(
+      !(await confirmAction(
         `${formatMoney(payment.amount)} ${paymentMethods[payment.method]} ödemesi silinsin mi?`,
-      )
+      ))
     )
       return;
     const previous = guest.status;
@@ -350,12 +352,18 @@ export function TabGuestDetail({
   const removeGuest = async () => {
     if (
       lines.length &&
-      !window.confirm(
+      !(await confirmAction(
         `${guest.name} hesabında ${lines.length} kalem var. Kalemler ve ödemeler de silinecek. Yine de silinsin mi?`,
-      )
+        "Devam et",
+      ))
     )
       return;
-    if (!window.confirm(`${guest.name} silinsin mi? Bu işlem geri alınamaz.`))
+    if (
+      !(await confirmAction(
+        `${guest.name} silinsin mi? Bu işlem geri alınamaz.`,
+        "Misafiri sil",
+      ))
+    )
       return;
     setBusy(true);
     const r = await deleteTabGuest(guest.id).catch(
@@ -840,7 +848,7 @@ export function TabGuestDetail({
                         className="tab-x"
                         aria-label={`${line.name} geçmişten sil`}
                         disabled={busy}
-                        onClick={() => removeHistoryLine(line)}
+                        onClick={() => void removeHistoryLine(line)}
                       >
                         ✕
                       </button>
@@ -862,7 +870,7 @@ export function TabGuestDetail({
                         className="tab-x"
                         aria-label={`${formatMoney(p.amount)} ödemesini geçmişten sil`}
                         disabled={busy}
-                        onClick={() => removeHistoryPayment(p)}
+                        onClick={() => void removeHistoryPayment(p)}
                       >
                         ✕
                       </button>

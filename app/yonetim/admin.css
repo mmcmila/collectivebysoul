@@ -914,3 +914,45 @@
   color: #7b836c;
   font-size: 11px;
 }
+
+/* In-page confirmation (replaces window.confirm, which some embedded browsers suppress). */
+.ad-confirm {
+  /* The global reset removes the margin that centres a modal dialog. */
+  margin: auto;
+  width: min(420px, calc(100vw - 32px));
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  background: #fffdf5;
+  color: #2f3a24;
+  box-shadow: 0 18px 60px rgb(31 40 22 / 0.28);
+}
+.ad-confirm::backdrop {
+  background: rgb(31 40 22 / 0.55);
+}
+.ad-confirm-body {
+  padding: 22px 20px 18px;
+}
+.ad-confirm-body p {
+  margin: 0 0 18px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.ad-confirm-actions {
+  display: flex;
+  gap: 10px;
+}
+.ad-confirm-actions button {
+  flex: 1;
+  min-height: 48px;
+  border: 1px solid #d9ddcb;
+  border-radius: 9px;
+  background: none;
+  color: #435431;
+  font-size: 15px;
+}
+.ad-confirm-actions .ad-confirm-yes {
+  border-color: #9c4728;
+  background: #9c4728;
+  color: #fff9e9;
+}

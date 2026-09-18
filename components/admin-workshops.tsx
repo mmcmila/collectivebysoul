@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmAction } from "@/components/confirm-dialog";
 import { useRef, useState } from "react";
 import { removeWorkshopParticipant } from "@/app/yonetim/actions";
 import { useAction } from "@/hooks/use-action";
@@ -26,9 +27,10 @@ export function AdminWorkshops({
   async function remove(guest: { id: string; name: string }) {
     if (
       !selected ||
-      !window.confirm(
+      !(await confirmAction(
         `${guest.name}, ${names[selected]} atölyesinden çıkarılsın mı? Diğer atölyeleri ve etkinlik kaydı korunur.`,
-      )
+        "Çıkar",
+      ))
     )
       return;
     setMessage("");
