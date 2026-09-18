@@ -1,4 +1,5 @@
 "use client";
+import { confirmAction } from "@/components/confirm-dialog";
 import { useState } from "react";
 import {
   addTabGuestsBulk,
@@ -224,13 +225,13 @@ export function TabSettings({
                         className="tab-x"
                         aria-label={`${row.name || "ürün"} sil`}
                         disabled={menuAction.busy}
-                        onClick={() => {
+                        onClick={async () => {
                           if (row.id === null)
                             return setDraft(rows.filter((r) => r.key !== row.key));
                           if (
-                            !window.confirm(
+                            !(await confirmAction(
                               `${row.name} menüden silinsin mi? Geçmiş satışlar korunur.`,
-                            )
+                            ))
                           )
                             return;
                           void menuAction.run(
@@ -337,10 +338,11 @@ export function TabSettings({
                   className="tab-x"
                   aria-label={`${row.label || "IBAN"} sil`}
                   disabled={ibanAction.busy}
-                  onClick={() => {
+                  onClick={async () => {
                     if (row.id === null)
                       return setAccountDraft(accountRows.filter((r) => r.key !== row.key));
-                    if (!window.confirm(`${row.label} IBAN’ı silinsin mi?`)) return;
+                    if (!(await confirmAction(`${row.label} IBAN’ı silinsin mi?`)))
+                      return;
                     void ibanAction.run(
                       "Bağlantı kesildi.",
                       () => deleteBankAccount(row.id as string),

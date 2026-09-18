@@ -1,4 +1,5 @@
 "use client";
+import { ConfirmHost } from "@/components/confirm-dialog";
 import { AdminWorkshops } from "@/components/admin-workshops";
 import {
   ParticipantControls,
@@ -167,6 +168,7 @@ export function AdminPanel({ initial }: { initial: AdminData }) {
   };
   return (
     <div className="ad">
+      <ConfirmHost />
       <header className="ad-header">
         <Link href="/" className="ad-brand">
           <Image src="/assets/brand-mark.png" alt="" width={32} height={40} />

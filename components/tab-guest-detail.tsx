@@ -1,4 +1,5 @@
 "use client";
+import { confirmAction } from "@/components/confirm-dialog";
 import { useState } from "react";
 import {
   addTabLine,
@@ -15,12 +16,16 @@ import {
 import type { Notify } from "@/components/tab-module";
 import {
   balanceMessage,
+  canClose,
+  canDeleteLine,
   canDeleteRecord,
   formatMoney,
   formatTime,
   guestTotals,
+  hasActivity,
   parseAmount,
   pastRounds,
+  startsNewRound,
   statusAfterPayment,
   statusAfterPaymentRemoved,
   visibleMenu,
@@ -85,14 +90,24 @@ export function TabGuestDetail({
   const menu = visibleMenu(data.menu, station, allMenu);
   const isAdmin = user.role === "admin";
 
-  const setStatus = (d: TabData, status: TabStatus): TabData => ({
+  const setStatus = (
+    d: TabData,
+    status: TabStatus,
+    round = guest.round,
+  ): TabData => ({
     ...d,
-    guests: d.guests.map((g) => (g.id === guest.id ? { ...g, status } : g)),
+    guests: d.guests.map((g) =>
+      g.id === guest.id ? { ...g, status, round } : g,
+    ),
   });
 
   const addItem = async (item: MenuItem) => {
     const id = tempId();
     const previous = guest.status;
+    // An order on a paid tab starts a new round; the paid one moves to history.
+    const round = startsNewRound(guest.status, totals)
+      ? guest.round + 1
+      : guest.round;
     const temp: TabLine = {
       id,
       guestId: guest.id,
@@ -103,12 +118,12 @@ export function TabGuestDetail({
       station: item.station,
       complimentary: false,
       discountPercent: guest.discountPercent,
-      round: guest.round,
+      round,
       createdBy: user.id,
       createdByName: user.name,
       createdAt: new Date().toISOString(),
     };
-    mutate((d) => setStatus({ ...d, lines: [temp, ...d.lines] }, "open"));
+    mutate((d) => setStatus({ ...d, lines: [temp, ...d.lines] }, "open", round));
     notify("+ " + item.name);
     const r = await addTabLine(guest.id, item.id).catch(
       (): Result => ({ error: OFFLINE }),
@@ -127,6 +142,7 @@ export function TabGuestDetail({
       setStatus(
         { ...d, lines: d.lines.map((l) => (l.id === id ? r.line : l)) },
         r.status,
+        r.line.round,
       ),
     );
     // A wrong tap is undone from the toast without a confirm dialog.
@@ -138,7 +154,7 @@ export function TabGuestDetail({
   };
 
   const removeLine = async (line: TabLine, confirm = true) => {
-    if (confirm && !window.confirm(`${line.name} silinsin mi?`)) return;
+    if (confirm && !(await confirmAction(`${line.name} silinsin mi?`))) return;
     mutate((d) => ({ ...d, lines: d.lines.filter((l) => l.id !== line.id) }));
     const r = await deleteTabLine(line.id).catch(
       (): Result => ({ error: OFFLINE }),
@@ -152,20 +168,15 @@ export function TabGuestDetail({
     void refresh();
   };
 
-  const takePayment = async (closing = false) => {
-    const parsed = closing ? null : parseAmount(amount);
+  // "Ödeme alındı": records the typed amount, or the whole balance when empty.
+  // Once nothing is owed the tab closes by itself.
+  const takePayment = async () => {
+    const parsed = parseAmount(amount);
     if (parsed === undefined) return notify("Tutarı kontrol et.", "error");
     const value = parsed ?? totals.due;
     if (value <= 0) return notify("Bu hesapta kalan borç yok.", "error");
     if (method === "iban" && !account)
       return notify("Önce Ayarlar’dan bir IBAN ekle.", "error");
-    if (
-      closing &&
-      !window.confirm(
-        `Kalan ${formatMoney(value)} ${paymentMethods[method]}${method === "iban" && account ? ` (${account.label})` : ""} olarak alınsın ve hesap kapatılsın mı?`,
-      )
-    )
-      return;
     const id = tempId();
     const previous = guest.status;
     const temp: TabPayment = {
@@ -192,7 +203,7 @@ export function TabGuestDetail({
               : g,
           ),
         },
-        statusAfterPayment(totals.due - value, closing),
+        statusAfterPayment(totals.due - value),
       ),
     );
     setAmount("");
@@ -201,7 +212,6 @@ export function TabGuestDetail({
       parsed,
       method,
       method === "iban" ? (account?.id ?? null) : null,
-      closing,
     ).catch(
       (): Result => ({ error: OFFLINE }),
     );
@@ -226,7 +236,7 @@ export function TabGuestDetail({
       ),
     );
     notify(
-      `${closing ? "Hesap kapatıldı" : "Ödeme alındı"}: ${formatMoney(r.payment.amount)} · ${paymentMethods[method]}${r.payment.accountLabel ? ` · ${r.payment.accountLabel}` : ""}`,
+      `Ödeme alındı: ${formatMoney(r.payment.amount)} · ${paymentMethods[method]}${r.payment.accountLabel ? ` · ${r.payment.accountLabel}` : ""}${r.status === "closed" ? " · borç kalmadı, hesap kapandı" : ""}`,
     );
     void refresh();
   };
@@ -243,11 +253,23 @@ export function TabGuestDetail({
     notify(done);
     await refresh();
   };
-  const markPending = () =>
-    simple(
-      () => markIbanPending(guest.id, account?.id ?? null),
-      "Hesap açık bırakıldı · IBAN bekleniyor",
+  // "Açık hesap": no payment is taken, the balance stays on the open tab.
+  // With IBAN selected the tab is also flagged "IBAN bekleniyor".
+  const leaveOpen = async () => {
+    if (method === "iban" && guest.pendingMethod !== "iban") {
+      setBusy(true);
+      const r = await markIbanPending(guest.id, account?.id ?? null).catch(
+        (): Result => ({ error: OFFLINE }),
+      );
+      setBusy(false);
+      if (r.error) return notify(r.error, "error");
+      void refresh();
+    }
+    notify(
+      `Açık hesap · ${guest.name} · kalan ${formatMoney(totals.due)}${method === "iban" ? " · IBAN bekleniyor" : ""}`,
     );
+    onBack();
+  };
   const unmarkPending = () =>
     simple(() => clearPending(guest.id), "IBAN bekleme kaldırıldı");
   const setDiscount = (percent: number | null) =>
@@ -259,6 +281,21 @@ export function TabGuestDetail({
           ? `%${percent} indirim · yeni siparişlere`
           : "İndirim kaldırıldı · yeni siparişler indirimsiz",
     );
+  // Paid history is locked; only the organiser may remove entries from it.
+  const removeHistoryLine = async (line: TabLine) => {
+    if (!(await confirmAction(`Ödenmiş geçmişten ${line.name} silinsin mi?`)))
+      return;
+    void simple(() => deleteTabLine(line.id), "Geçmişten silindi: " + line.name);
+  };
+  const removeHistoryPayment = async (payment: TabPayment) => {
+    if (
+      !(await confirmAction(
+        `Ödenmiş geçmişten ${formatMoney(payment.amount)} ${paymentMethods[payment.method]} ödemesi silinsin mi?`,
+      ))
+    )
+      return;
+    void simple(() => deleteTabPayment(payment.id), "Geçmişten ödeme silindi");
+  };
   const toggleComplimentary = (line: TabLine) =>
     simple(
       () => setLineComplimentary(line.id, !line.complimentary),
@@ -267,9 +304,9 @@ export function TabGuestDetail({
 
   const removePayment = async (payment: TabPayment) => {
     if (
-      !window.confirm(
+      !(await confirmAction(
         `${formatMoney(payment.amount)} ${paymentMethods[payment.method]} ödemesi silinsin mi?`,
-      )
+      ))
     )
       return;
     const previous = guest.status;
@@ -293,11 +330,10 @@ export function TabGuestDetail({
     void refresh();
   };
 
-  // "Hesabı kapat": with a balance left, the remaining amount is taken with
-  // the chosen method (Nakit / IBAN / POS) and the tab closes; otherwise the
-  // tab simply closes.
+  // "Hesabı kapat" means nothing is owed, so it is only offered without a
+  // balance (e.g. a tab of complimentary lines); payments close a tab themselves.
   const closeTab = async () => {
-    if (totals.due > 0) return takePayment(true);
+    if (!closable) return;
     setBusy(true);
     mutate((d) => setStatus(d, "closed"));
     const r = await closeTabGuest(guest.id).catch(
@@ -316,12 +352,18 @@ export function TabGuestDetail({
   const removeGuest = async () => {
     if (
       lines.length &&
-      !window.confirm(
+      !(await confirmAction(
         `${guest.name} hesabında ${lines.length} kalem var. Kalemler ve ödemeler de silinecek. Yine de silinsin mi?`,
-      )
+        "Devam et",
+      ))
     )
       return;
-    if (!window.confirm(`${guest.name} silinsin mi? Bu işlem geri alınamaz.`))
+    if (
+      !(await confirmAction(
+        `${guest.name} silinsin mi? Bu işlem geri alınamaz.`,
+        "Misafiri sil",
+      ))
+    )
       return;
     setBusy(true);
     const r = await deleteTabGuest(guest.id).catch(
@@ -367,6 +409,9 @@ export function TabGuestDetail({
   };
 
   const open = guest.status === "open";
+  const closable = canClose(guest.status, totals.due) && hasActivity(totals);
+  const typed = parseAmount(amount);
+  const payable = typed === undefined ? 0 : (typed ?? totals.due);
   return (
     <section className="tab-detail" aria-labelledby="tab-guest-title">
       <button className="tab-back" onClick={onBack}>
@@ -498,29 +543,29 @@ export function TabGuestDetail({
                   )}
                 </span>
                 {canDeleteRecord(user, line) && (
-                  <>
-                    <button
-                      className="tab-x tab-gift"
-                      aria-label={
-                        line.complimentary
-                          ? `${line.name} ikramını kaldır`
-                          : `${line.name} ikram et`
-                      }
-                      aria-pressed={line.complimentary}
-                      disabled={isTemp(line.id) || busy}
-                      onClick={() => void toggleComplimentary(line)}
-                    >
-                      🎁
-                    </button>
-                    <button
-                      className="tab-x"
-                      aria-label={`${line.name} sil`}
-                      disabled={isTemp(line.id)}
-                      onClick={() => void removeLine(line)}
-                    >
-                      ✕
-                    </button>
-                  </>
+                  <button
+                    className="tab-x tab-gift"
+                    aria-label={
+                      line.complimentary
+                        ? `${line.name} ikramını kaldır`
+                        : `${line.name} ikram et`
+                    }
+                    aria-pressed={line.complimentary}
+                    disabled={isTemp(line.id) || busy}
+                    onClick={() => void toggleComplimentary(line)}
+                  >
+                    🎁
+                  </button>
+                )}
+                {canDeleteLine(user) && (
+                  <button
+                    className="tab-x"
+                    aria-label={`${line.name} sil`}
+                    disabled={isTemp(line.id)}
+                    onClick={() => void removeLine(line)}
+                  >
+                    ✕
+                  </button>
                 )}
               </li>
             ))}
@@ -611,46 +656,52 @@ export function TabGuestDetail({
             </div>
           )}
           <div className="tab-row">
-            <button className="ad-primary" disabled={busy}>
-              Ödeme al · açık kalsın
-            </button>
             <button
-              type="button"
-              className="tab-secondary"
-              disabled={busy || !open}
-              onClick={() => void closeTab()}
+              className="ad-primary"
+              disabled={busy || (typed === null && totals.due <= 0)}
             >
-              {open
-                ? totals.due > 0
-                  ? `Hesabı kapat · ${formatMoney(totals.due)}`
-                  : "Hesabı kapat"
-                : "Kapalı"}
+              {payable > 0
+                ? `Ödeme alındı · ${formatMoney(payable)}`
+                : "Ödeme alındı"}
             </button>
+            {closable ? (
+              <button
+                type="button"
+                className="tab-secondary"
+                disabled={busy}
+                onClick={() => void closeTab()}
+              >
+                Hesabı kapat · borç yok
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="tab-secondary"
+                disabled={busy || totals.due <= 0}
+                onClick={() => void leaveOpen()}
+              >
+                {method === "iban" && totals.due > 0
+                  ? "Açık hesap · IBAN ile ödeyecek"
+                  : "Açık hesap"}
+              </button>
+            )}
           </div>
-          {method === "iban" && open && totals.due > 0 && (
-            <button
-              type="button"
-              className="tab-secondary"
-              disabled={busy || guest.pendingMethod === "iban"}
-              onClick={() => void markPending()}
-            >
-              {guest.pendingMethod === "iban"
-                ? "IBAN bekleniyor · açık"
-                : "IBAN ile ödeyecek · açık bırak"}
-            </button>
-          )}
           {guest.pendingMethod === "iban" && (
             <p className="tab-pending-note">
-              Misafir IBAN ile ödeyecek; para gelince “Ödeme al” ile kaydet.{" "}
+              Misafir IBAN ile ödeyecek; para gelince “Ödeme alındı” ile kaydet.{" "}
               <button type="button" onClick={() => void unmarkPending()} disabled={busy}>
                 Beklemeyi kaldır
               </button>
             </p>
           )}
           <p className="ad-note">
-            “Ödeme al” yazılan tutarı, boşsa kalanın tamamını alır; hesap açık
-            kalır, misafir sipariş vermeye devam edebilir. “Hesabı kapat” kalanı
-            seçili yöntemle alır ve hesabı kapatır.
+            {totals.due > 0
+              ? "Borç varken hesap açıktır. “Ödeme alındı” yazılan tutarı, boşsa kalanın tamamını kaydeder; borç bitince hesap kendiliğinden kapanır. “Açık hesap” ödeme almadan hesabı açık bırakır."
+              : open
+                ? closable
+                  ? "Borç yok. “Hesabı kapat” ile hesabı Kapalılar’a alabilirsin."
+                  : "Henüz borç yok."
+                : "Hesap kapalı · borç yok. Yeni sipariş eklenirse yeni hesap açılır; ödenmiş siparişler profilin en altında görünür."}
           </p>
         </form>
         {method === "iban" && (
@@ -685,78 +736,6 @@ export function TabGuestDetail({
         )}
       </section>
 
-      {history.length > 0 && (
-        <section className="tab-card tab-history" aria-labelledby="tab-history-title">
-          <h2 id="tab-history-title">Geçmiş hesaplar</h2>
-          <p className="ad-note">
-            Bu misafirin daha önce kapatılmış hesapları. Değiştirilemez; Özet
-            ve CSV’ye dahildir.
-          </p>
-          {history.map((h) => (
-            <details key={h.round} className="tab-round">
-              <summary>
-                <span>
-                  <strong>{h.round}. hesap</strong>
-                  {h.from && (
-                    <small>
-                      {" "}
-                      · {formatTime(h.from)}
-                      {h.to && h.to !== h.from && `–${formatTime(h.to)}`}
-                    </small>
-                  )}
-                </span>
-                <span className="tab-round-sum">
-                  {formatMoney(h.totals.total)} ·{" "}
-                  {h.payments.length
-                    ? [...new Set(h.payments.map((p) => paymentMethods[p.method] + (p.accountLabel ? ` ${p.accountLabel}` : "")))].join(", ")
-                    : "ödeme yok"}
-                </span>
-              </summary>
-              <ul className="tab-lines">
-                {h.lines.map((line) => (
-                  <li key={line.id} className={line.complimentary ? "comp" : ""}>
-                    <span className="tab-line-main">
-                      <span className="tab-line-name">
-                        {line.name}
-                        {line.qty > 1 && ` ×${line.qty}`}
-                        {line.complimentary && <span className="tab-flag comp">İkram</span>}
-                        {line.discountPercent > 0 && !line.complimentary && (
-                          <span className="tab-flag discount">%{line.discountPercent}</span>
-                        )}
-                      </span>
-                      <span className="tab-line-sub">
-                        {stations[line.station]} · {formatTime(line.createdAt)}
-                      </span>
-                    </span>
-                    <span className="tab-line-amount">
-                      {formatMoney(line.complimentary ? 0 : line.price * line.qty)}
-                    </span>
-                  </li>
-                ))}
-                {h.payments.map((p) => (
-                  <li key={p.id} className="tab-round-payment">
-                    <span className="tab-line-main">
-                      <span className="tab-line-name">
-                        Ödeme · {paymentMethods[p.method]}
-                        {p.accountLabel && ` · ${p.accountLabel}`}
-                      </span>
-                      <span className="tab-line-sub">{formatTime(p.createdAt)}</span>
-                    </span>
-                    <span className="tab-line-amount">{formatMoney(p.amount)}</span>
-                  </li>
-                ))}
-              </ul>
-              {(h.totals.discount > 0 || h.totals.complimentary > 0) && (
-                <p className="ad-note">
-                  {h.totals.discount > 0 && `−${formatMoney(h.totals.discount)} indirim`}
-                  {h.totals.discount > 0 && h.totals.complimentary > 0 && " · "}
-                  {h.totals.complimentary > 0 && `${formatMoney(h.totals.complimentary)} ikram`}
-                </p>
-              )}
-            </details>
-          ))}
-        </section>
-      )}
       {isAdmin && (
         <section className="tab-card" aria-labelledby="tab-discount-title">
           <h2 id="tab-discount-title">İndirim</h2>
@@ -814,6 +793,100 @@ export function TabGuestDetail({
               Kurala dön
             </button>
           </div>
+        </section>
+      )}
+      {history.length > 0 && (
+        <section className="tab-card tab-history" aria-labelledby="tab-history-title">
+          <h2 id="tab-history-title">Ödenmiş geçmiş siparişler</h2>
+          <p className="ad-note">
+            Ödemesi alınıp kapatılmış önceki hesaplar; Özet ve CSV’ye dahildir.{" "}
+            {isAdmin
+              ? "Yalnızca yönetici ✕ ile silebilir."
+              : "Yalnızca yönetici silebilir."}
+          </p>
+          {history.map((h) => (
+            <details key={h.round} className="tab-round">
+              <summary>
+                <span>
+                  <strong>{h.round}. hesap</strong>
+                  {h.from && (
+                    <small>
+                      {" "}
+                      · {formatTime(h.from)}
+                      {h.to && h.to !== h.from && `–${formatTime(h.to)}`}
+                    </small>
+                  )}
+                </span>
+                <span className="tab-round-sum">
+                  {formatMoney(h.totals.total)} ·{" "}
+                  {h.payments.length
+                    ? [...new Set(h.payments.map((p) => paymentMethods[p.method] + (p.accountLabel ? ` ${p.accountLabel}` : "")))].join(", ")
+                    : "ödeme yok"}
+                </span>
+              </summary>
+              <ul className="tab-lines">
+                {h.lines.map((line) => (
+                  <li key={line.id} className={line.complimentary ? "comp" : ""}>
+                    <span className="tab-line-main">
+                      <span className="tab-line-name">
+                        {line.name}
+                        {line.qty > 1 && ` ×${line.qty}`}
+                        {line.complimentary && <span className="tab-flag comp">İkram</span>}
+                        {line.discountPercent > 0 && !line.complimentary && (
+                          <span className="tab-flag discount">%{line.discountPercent}</span>
+                        )}
+                      </span>
+                      <span className="tab-line-sub">
+                        {stations[line.station]} · {formatTime(line.createdAt)}
+                      </span>
+                    </span>
+                    <span className="tab-line-amount">
+                      {formatMoney(line.complimentary ? 0 : line.price * line.qty)}
+                    </span>
+                    {isAdmin && (
+                      <button
+                        className="tab-x"
+                        aria-label={`${line.name} geçmişten sil`}
+                        disabled={busy}
+                        onClick={() => void removeHistoryLine(line)}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </li>
+                ))}
+                {h.payments.map((p) => (
+                  <li key={p.id} className="tab-round-payment">
+                    <span className="tab-line-main">
+                      <span className="tab-line-name">
+                        Ödeme · {paymentMethods[p.method]}
+                        {p.accountLabel && ` · ${p.accountLabel}`}
+                      </span>
+                      <span className="tab-line-sub">{formatTime(p.createdAt)}</span>
+                    </span>
+                    <span className="tab-line-amount">{formatMoney(p.amount)}</span>
+                    {isAdmin && (
+                      <button
+                        className="tab-x"
+                        aria-label={`${formatMoney(p.amount)} ödemesini geçmişten sil`}
+                        disabled={busy}
+                        onClick={() => void removeHistoryPayment(p)}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {(h.totals.discount > 0 || h.totals.complimentary > 0) && (
+                <p className="ad-note">
+                  {h.totals.discount > 0 && `−${formatMoney(h.totals.discount)} indirim`}
+                  {h.totals.discount > 0 && h.totals.complimentary > 0 && " · "}
+                  {h.totals.complimentary > 0 && `${formatMoney(h.totals.complimentary)} ikram`}
+                </p>
+              )}
+            </details>
+          ))}
         </section>
       )}
       {isAdmin && (

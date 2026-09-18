@@ -7,9 +7,11 @@ import { currentAdmin, currentOrganiser } from "@/lib/guest/admin-session";
 import { guestDb, UserError } from "@/lib/guest/db";
 import { hash } from "@/lib/guest/session";
 import {
+  canDeleteLine,
   canDeleteRecord,
   guestTotals,
   resolvePaymentAmount,
+  startsNewRound,
   statusAfterPayment,
   statusAfterPaymentRemoved,
 } from "@/lib/tab/calc";
@@ -188,17 +190,14 @@ export async function addTabLine(guestId: string, menuItemId: string) {
       // Always a new row: two stations adding at once never overwrite each other.
       // The discount in force now is copied onto the line and never changes.
       const discountPercent = await currentDiscount(tx, guest);
-      // Reopening a closed tab starts a new round on the same profile; the
-      // closed round stays as history.
-      let status: TabStatus = guest.status;
+      // An order on a settled tab (closed, or fully paid) starts a new round
+      // on the same profile; the paid round stays as history.
+      const status: TabStatus = "open";
       let round = guest.round;
-      if (status === "closed") {
-        status = "open";
-        const [prev] =
-          await tx`SELECT count(*)::int AS n FROM guest_event.tab_lines WHERE guest_id=${guestId} AND round=${guest.round}`;
-        if (prev.n > 0) round = guest.round + 1;
-        await tx`UPDATE guest_event.tab_guests SET status='open',round=${round} WHERE id=${guestId}`;
-      }
+      if (startsNewRound(guest.status, await balance(tx, guestId, guest.round)))
+        round = guest.round + 1;
+      if (guest.status !== status || round !== guest.round)
+        await tx`UPDATE guest_event.tab_guests SET status=${status},round=${round} WHERE id=${guestId}`;
       const [line] =
         await tx`INSERT INTO guest_event.tab_lines(guest_id,menu_item_id,name,price,qty,station,discount_percent,round,created_by) VALUES(${guestId},${item.id},${item.name},${item.price},1,${item.station},${discountPercent},${round},${user.id}) RETURNING id,created_at`;
       const created: TabLine = {
@@ -233,13 +232,12 @@ export async function deleteTabLine(lineId: string) {
       const [line] =
         await tx`SELECT id,guest_id,menu_item_id,name,price,qty,station,complimentary,round,created_by,created_at FROM guest_event.tab_lines WHERE id=${lineId} FOR UPDATE`;
       if (!line) throw new UserError("Bu kalem zaten silinmiş.");
-      if (!canDeleteRecord(user, { createdBy: line.created_by }))
-        throw new UserError(
-          "Sadece kalemi giren kişi veya yönetici silebilir.",
-        );
+      if (!canDeleteLine(user))
+        throw new UserError("Bu kalemi silme yetkin yok.");
       const owner = await lockGuest(tx, line.guest_id);
-      if (line.round !== owner.round)
-        throw new UserError("Kapanmış eski hesaba ait kalem değiştirilemez.");
+      // Paid history is locked for staff; only the organiser may clean it up.
+      if (line.round !== owner.round && user.role !== "admin")
+        throw new UserError("Kapanmış eski hesaba ait kalemi yalnızca yönetici silebilir.");
       await audit(tx, user, "line.delete", line.guest_id, line);
       await tx`DELETE FROM guest_event.tab_lines WHERE id=${lineId}`;
     });
@@ -254,7 +252,6 @@ export async function addTabPayment(
   amount: number | null,
   method: string,
   accountId: string | null = null,
-  close = false,
 ) {
   const user = await currentAdmin();
   if (!user) return fail(null, SESSION_ERROR);
@@ -277,13 +274,10 @@ export async function addTabPayment(
       const { due } = await balance(tx, guestId, guest.round);
       const resolved = resolvePaymentAmount(amount, due);
       if ("error" in resolved) throw new UserError(resolved.error);
-      if (close === true && due - resolved.amount > 0)
-        throw new UserError(
-          "Bu tutar kalanı kapatmıyor. Kalanın tamamını al veya hesabı açık bırak.",
-        );
       const [payment] =
         await tx`INSERT INTO guest_event.tab_payments(guest_id,amount,method,bank_account_id,round,created_by) VALUES(${guestId},${resolved.amount},${method},${account?.id ?? null},${guest.round},${user.id}) RETURNING id,created_at`;
-      const status = statusAfterPayment(due - resolved.amount, close === true);
+      // Nothing left to pay closes the tab; a balance keeps it open.
+      const status = statusAfterPayment(due - resolved.amount);
       // A recorded payment ends any "will pay by IBAN later" state.
       await tx`UPDATE guest_event.tab_guests SET status=${status},pending_method=NULL,pending_account_id=NULL WHERE id=${guestId}`;
       const created: TabPayment = {
@@ -320,10 +314,12 @@ export async function deleteTabPayment(paymentId: string) {
           "Sadece ödemeyi alan kişi veya yönetici silebilir.",
         );
       const guest = await lockGuest(tx, payment.guest_id);
-      if (payment.round !== guest.round)
-        throw new UserError("Kapanmış eski hesaba ait ödeme değiştirilemez.");
+      if (payment.round !== guest.round && user.role !== "admin")
+        throw new UserError("Kapanmış eski hesaba ait ödemeyi yalnızca yönetici silebilir.");
       await audit(tx, user, "payment.delete", payment.guest_id, payment);
       await tx`DELETE FROM guest_event.tab_payments WHERE id=${paymentId}`;
+      // A payment removed from paid history does not touch the current round.
+      if (payment.round !== guest.round) return;
       const { due } = await balance(tx, payment.guest_id, guest.round);
       const status = statusAfterPaymentRemoved(guest.status, due);
       if (status !== guest.status)
@@ -344,7 +340,7 @@ export async function closeTabGuest(guestId: string) {
       const guest = await lockGuest(tx, guestId);
       const { due } = await balance(tx, guestId, guest.round);
       if (due > 0)
-        throw new UserError("Kalan borç varken hesap kapatılamaz. Önce ödeme al.");
+        throw new UserError("Kalan borç varken hesap kapatılamaz. Önce ödemeyi kaydet.");
       await tx`UPDATE guest_event.tab_guests SET status='closed',pending_method=NULL,pending_account_id=NULL WHERE id=${guestId}`;
     });
     return ok({});
@@ -474,6 +470,12 @@ export async function setLineComplimentary(lineId: string, complimentary: boolea
       if (line.round !== owner.round)
         throw new UserError("Kapanmış eski hesaba ait kalem değiştirilemez.");
       await tx`UPDATE guest_event.tab_lines SET complimentary=${complimentary} WHERE id=${lineId}`;
+      // Charging a line again on a closed tab leaves a balance: it is open again.
+      if (owner.status === "closed") {
+        const { due } = await balance(tx, line.guest_id, owner.round);
+        if (due > 0)
+          await tx`UPDATE guest_event.tab_guests SET status='open' WHERE id=${line.guest_id}`;
+      }
       await audit(tx, user, "line.complimentary", line.guest_id, {
         ...line,
         complimentary,
@@ -742,6 +744,31 @@ export async function renameStaffAccount(staffId: string, name: string) {
     return ok({});
   } catch (e) {
     return fail(e, "İsim değiştirilemedi.");
+  }
+}
+
+/** Removes one entry of the activity log ("Hareket kaydı"). Admin only. */
+export async function deleteAuditEntry(entryId: string) {
+  const user = await currentOrganiser();
+  if (!user) return fail(null, ADMIN_ERROR);
+  if (!isUuid(entryId)) return fail(null, "Geçersiz kayıt.");
+  try {
+    await guestDb()`DELETE FROM guest_event.tab_audit WHERE id=${entryId}`;
+    return ok({});
+  } catch {
+    return fail(null, "Kayıt silinemedi.");
+  }
+}
+
+/** Empties the whole activity log, e.g. after test runs. Admin only. */
+export async function clearAudit() {
+  const user = await currentOrganiser();
+  if (!user) return fail(null, ADMIN_ERROR);
+  try {
+    const rows = await guestDb()`DELETE FROM guest_event.tab_audit RETURNING id`;
+    return ok({ count: rows.length });
+  } catch {
+    return fail(null, "Hareket kaydı temizlenemedi.");
   }
 }
 

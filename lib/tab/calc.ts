@@ -75,12 +75,22 @@ export function guestTotals(
   };
 }
 
-/** Rule: a payment closes the tab only when asked to and nothing is left. */
-export const statusAfterPayment = (due: number, close: boolean): TabStatus =>
-  close && due <= 0 ? "closed" : "open";
+/** Rule: a tab with a balance is open; once everything is paid it is closed. */
+export const statusAfterPayment = (due: number): TabStatus =>
+  due <= 0 ? "closed" : "open";
 
 /** Rule: adding a line to a closed tab reopens it. */
 export const statusAfterLine = (): TabStatus => "open";
+
+/**
+ * Rule: a new order on a settled round (closed, or fully paid) starts the next
+ * round, so the paid orders move to the history at the bottom of the profile.
+ * An overpaid round stays current so the credit is used by the new order.
+ */
+export const startsNewRound = (
+  status: TabStatus,
+  round: Pick<Totals, "count" | "paid" | "due">,
+) => round.count > 0 && round.due === 0 && (status === "closed" || round.paid > 0);
 
 /** Rule: removing a payment that leaves a balance reopens a closed tab. */
 export const statusAfterPaymentRemoved = (
@@ -172,7 +182,14 @@ export const sortByName = <T extends { name: string }>(items: T[]) =>
 export const stationForRole = (role: StaffRole): Station =>
   role === "pizza" ? "pizza" : "bar";
 
-/** Lines and payments can be removed by the person who entered them or an admin. */
+/**
+ * Any staff member may delete a wrongly entered line, whoever entered it;
+ * the deletion is logged with who deleted it and when.
+ */
+export const canDeleteLine = (user: { role: StaffRole }) =>
+  user.role === "admin" || user.role === "bar" || user.role === "pizza";
+
+/** Payments (and "ikram") can be changed by the person who entered them or an admin. */
 export const canDeleteRecord = (
   user: { id: string; role: StaffRole },
   record: { createdBy: string | null },

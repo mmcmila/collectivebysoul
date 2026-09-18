@@ -54,9 +54,9 @@ try{
  const line3=uuid((await action('addTabLine',[guest,pizzaItem.id],pizza.cookie)).body);assert.ok(line3);
  const snapshot=await sql`SELECT name,price,station FROM guest_event.tab_lines WHERE id=${line1}`;assert.equal(snapshot[0].name,bira.name);assert.equal(snapshot[0].price,bira.price);
  assert.ok((await action('deleteTabGuest',[guest],bar.cookie)).body.includes('yönetici yetkisi'),'guest deletion is admin only');
- // Deletion rights: owner or admin.
- assert.ok((await action('deleteTabLine',[line1],pizza.cookie)).body.includes('Sadece kalemi giren'));
- assert.ok((await action('deleteTabLine',[line1],bar.cookie)).body.includes('"ok":true'));
+ // Any staff member may delete a wrongly entered line, also one entered by a colleague; it is logged.
+ assert.ok((await action('deleteTabLine',[line1],pizza.cookie)).body.includes('"ok":true'),'staff can delete a line entered by someone else');
+ assert.ok((await action('deleteTabLine',[line1],bar.cookie)).body.includes('zaten silinmiş'));
  assert.ok((await action('deleteTabLine',[line3],admin.cookie)).body.includes('"ok":true'));
  const [audit]=await sql`SELECT count(*)::int AS n FROM guest_event.tab_audit WHERE action='line.delete' AND guest_id=${guest}`;assert.equal(audit.n,2,'deletions are logged');
  // Close rules.
@@ -67,9 +67,10 @@ try{
  assert.ok((await action('addTabPayment',[guest,null,'iban',null],pizza.cookie)).body.includes('Hangi IBAN'));
  assert.ok((await action('saveBankAccounts',[[{id:null,label:'TEST hesap '+tag,iban:'TR00 0000 0000 0000 0000 0000 00',active:true}]],admin.cookie)).body.includes('"ok":true'));
  const [accountRow]=await sql`SELECT id FROM guest_event.bank_accounts WHERE label=${'TEST hesap '+tag}`;created.accounts.push(accountRow.id);
- // Paying without closing keeps the tab open; closing takes the rest and closes.
- const kept=await action('addTabPayment',[guest,null,'iban',accountRow.id,false],pizza.cookie);assert.ok(kept.body.includes('"status":"open"'),'paying the balance without closing keeps the tab open');
- const kid=uuid(kept.body);assert.ok((await action('deleteTabPayment',[kid],pizza.cookie)).body.includes('"ok":true'));
+ // A balance means open, fully paid means closed; removing the payment reopens the same round.
+ const settled=await action('addTabPayment',[guest,null,'iban',accountRow.id],pizza.cookie);assert.ok(settled.body.includes('"status":"closed"'),'paying the whole balance closes the tab');
+ const kid=uuid(settled.body);assert.ok((await action('deleteTabPayment',[kid],pizza.cookie)).body.includes('"ok":true'));
+ const [back]=await sql`SELECT status,round FROM guest_event.tab_guests WHERE id=${guest}`;assert.equal(back.status,'open');assert.equal(back.round,1);
  assert.ok((await action('markIbanPending',[guest,accountRow.id],bar.cookie)).body.includes('"ok":true'));
  const [pending]=await sql`SELECT pending_method FROM guest_event.tab_guests WHERE id=${guest}`;assert.equal(pending.pending_method,'iban');
  assert.ok((await action('setGuestDiscount',[guest,50],bar.cookie)).body.includes('yönetici yetkisi'),'discounts are admin only');
@@ -86,8 +87,7 @@ try{
  const teamLine=uuid((await action('addTabLine',[autoTab.id,bira.id],bar.cookie)).body);const [teamSnap]=await sql`SELECT discount_percent FROM guest_event.tab_lines WHERE id=${teamLine}`;assert.equal(teamSnap.discount_percent,35,'team rule applies to a team participant');
  assert.ok((await action('saveDiscountRules',[[]],admin.cookie)).body.includes('"ok":true'));
  const [teamAfter]=await sql`SELECT discount_percent FROM guest_event.tab_lines WHERE id=${teamLine}`;assert.equal(teamAfter.discount_percent,35,'deleting the rule keeps the earlier line discounted');
- assert.ok((await action('addTabPayment',[guest,50,'cash',null,true],bar.cookie)).body.includes('kalanı kapatmıyor'),'closing with a partial amount is refused');
- const rest=await action('addTabPayment',[guest,null,'iban',accountRow.id,true],pizza.cookie);assert.ok(rest.body.includes('"status":"closed"'),'paying the balance closes the tab');
+ const rest=await action('addTabPayment',[guest,null,'iban',accountRow.id],pizza.cookie);assert.ok(rest.body.includes('"status":"closed"'),'paying the balance closes the tab');
  const [cleared]=await sql`SELECT pending_method,discount_percent FROM guest_event.tab_guests WHERE id=${guest}`;assert.equal(cleared.pending_method,null,'a recorded payment clears the IBAN-pending state');assert.equal(cleared.discount_percent,0);assert.ok(rest.body.includes('TEST hesap '+tag),'payment carries the account label');
  const [stored]=await sql`SELECT bank_account_id FROM guest_event.tab_payments WHERE guest_id=${guest} AND method='iban'`;assert.equal(stored.bank_account_id,accountRow.id);
  // Charged: line2 at 0% (200) + line5 at 50% (100) = 300; complimentary line4 costs nothing.
@@ -96,10 +96,20 @@ try{
  const reopened=await action('addTabLine',[guest,bira.id],bar.cookie);assert.ok(reopened.body.includes('"status":"open"'),'adding to a closed tab reopens it');
  const [status]=await sql`SELECT status,round FROM guest_event.tab_guests WHERE id=${guest}`;assert.equal(status.status,'open');assert.equal(status.round,2,'reopening starts a new round on the same guest');
  assert.ok(reopened.body.includes('"round":2'),'the new line belongs to round 2');
- assert.ok((await action('deleteTabLine',[line5],admin.cookie)).body.includes('eski hesaba ait'),'lines of a closed round cannot be changed');
- const ibanPayment=uuid(rest.body);assert.ok((await action('deleteTabPayment',[ibanPayment],pizza.cookie)).body.includes('eski hesaba ait'),'payments of a closed round cannot be changed');
+ // Paid history is locked for staff; only the organiser may clean it up, without touching the current round.
+ assert.ok((await action('deleteTabLine',[line5],bar.cookie)).body.includes('yalnızca yönetici'),'staff cannot change lines of a paid round');
+ const ibanPayment=uuid(rest.body);assert.ok((await action('deleteTabPayment',[ibanPayment],pizza.cookie)).body.includes('yalnızca yönetici'),'staff cannot change payments of a paid round');
+ assert.ok((await action('deleteTabLine',[line5],admin.cookie)).body.includes('"ok":true'),'the organiser can delete paid history');
+ assert.ok((await action('deleteTabPayment',[ibanPayment],admin.cookie)).body.includes('"ok":true'));
+ const [kept]=await sql`SELECT status,round FROM guest_event.tab_guests WHERE id=${guest}`;assert.equal(kept.status,'open');assert.equal(kept.round,2,'cleaning history leaves the current round alone');
+ // Activity log: only the organiser may delete entries. (clearAudit is not run here: it would wipe the real log.)
+ const [entry]=await sql`SELECT id FROM guest_event.tab_audit WHERE guest_id=${guest} AND action='line.delete' LIMIT 1`;
+ assert.ok((await action('deleteAuditEntry',[entry.id],bar.cookie)).body.includes('yönetici yetkisi'),'log deletion is admin only');
+ assert.ok((await action('clearAudit',[],bar.cookie)).body.includes('yönetici yetkisi'),'clearing the log is admin only');
+ assert.ok((await action('deleteAuditEntry',[entry.id],admin.cookie)).body.includes('"ok":true'));
+ const [logGone]=await sql`SELECT count(*)::int AS n FROM guest_event.tab_audit WHERE id=${entry.id}`;assert.equal(logGone.n,0,'the organiser can delete a log entry');
  // Current round: close with cash; only the payer or an admin may delete it, and deleting it reopens the tab.
- const closing=await action('addTabPayment',[guest,null,'cash',null,true],bar.cookie);assert.ok(closing.body.includes('"status":"closed"'));
+ const closing=await action('addTabPayment',[guest,null,'cash',null],bar.cookie);assert.ok(closing.body.includes('"status":"closed"'));
  const cashPayment=uuid(closing.body);assert.ok((await action('deleteTabPayment',[cashPayment],pizza.cookie)).body.includes('Sadece ödemeyi alan'));
  assert.ok((await action('deleteTabPayment',[cashPayment],bar.cookie)).body.includes('"ok":true'));
  const [after]=await sql`SELECT status,round FROM guest_event.tab_guests WHERE id=${guest}`;assert.equal(after.status,'open','removing a payment that leaves a balance reopens the tab');assert.equal(after.round,2,'reopening by payment removal stays in the same round');

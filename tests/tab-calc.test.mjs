@@ -7,6 +7,7 @@ import {
   buildCsv,
   canClose,
   describeAudit,
+  canDeleteLine,
   canDeleteRecord,
   formatMoney,
   guestRows,
@@ -16,6 +17,7 @@ import {
   parseAmount,
   pastRounds,
   resolvePaymentAmount,
+  startsNewRound,
   statusAfterLine,
   statusAfterPayment,
   statusAfterPaymentRemoved,
@@ -76,10 +78,15 @@ test("effective discount: personal override beats personal rule beats type rule"
 });
 
 test("a payment closes the tab only when closing was requested and nothing is left", () => {
-  assert.equal(statusAfterPayment(0, true), "closed");
-  assert.equal(statusAfterPayment(-500, true), "closed");
-  assert.equal(statusAfterPayment(100, true), "open");
-  assert.equal(statusAfterPayment(0, false), "open", "paying in round one keeps the tab open");
+  assert.equal(statusAfterPayment(0), "closed", "nothing owed closes the tab");
+  assert.equal(statusAfterPayment(-500), "closed");
+  assert.equal(statusAfterPayment(100), "open", "a balance keeps the tab open");
+  assert.equal(startsNewRound("closed", { count: 2, paid: 500, due: 0 }), true);
+  assert.equal(startsNewRound("open", { count: 2, paid: 500, due: 0 }), true, "a fully paid open tab also starts a new round");
+  assert.equal(startsNewRound("open", { count: 2, paid: 100, due: 400 }), false);
+  assert.equal(startsNewRound("open", { count: 1, paid: 0, due: 0 }), false, "complimentary-only open tab stays in its round");
+  assert.equal(startsNewRound("closed", { count: 0, paid: 0, due: 0 }), false);
+  assert.equal(startsNewRound("closed", { count: 1, paid: 900, due: -400 }), false, "credit is used by the next order");
 });
 
 test("adding a line always reopens; removing a payment reopens only when a balance remains", () => {
@@ -165,6 +172,11 @@ test("only the person who entered a record or an admin may delete it", () => {
   assert.ok(canDeleteRecord({ id: "u-admin", role: "admin" }, record));
   assert.ok(!canDeleteRecord({ id: "u-pizza", role: "pizza" }, record));
   assert.ok(!canDeleteRecord({ id: "u-bar", role: "bar" }, { createdBy: null }));
+});
+
+test("any staff member may delete a wrongly entered line", () => {
+  for (const role of ["admin", "bar", "pizza"]) assert.ok(canDeleteLine({ role }));
+  assert.ok(!canDeleteLine({ role: "guest" }));
 });
 
 test("summary groups by method, station and item, and lists debtors", () => {

@@ -1,9 +1,36 @@
 "use client";
+import { confirmAction } from "@/components/confirm-dialog";
+import { useState } from "react";
+import { clearAudit, deleteAuditEntry } from "@/app/yonetim/adisyon/actions";
+import type { Notify } from "@/components/tab-module";
 import { describeAudit, formatMoney, formatTime, summarize } from "@/lib/tab/calc";
 import { paymentMethods, stations, type TabData } from "@/lib/tab/types";
 
-export function TabSummary({ data }: { data: TabData }) {
+export function TabSummary({
+  data,
+  refresh,
+  notify,
+}: {
+  data: TabData;
+  refresh: () => Promise<void>;
+  notify: Notify;
+}) {
   const s = summarize(data);
+  const [busy, setBusy] = useState(false);
+  // The activity log is only sent to the organiser, who may also clean it up.
+  const cleanAudit = async (
+    run: () => Promise<{ error?: string }>,
+    done: string,
+  ) => {
+    setBusy(true);
+    const r = await run().catch(() => ({
+      error: "Bağlantı yok. İşlem kaydedilmedi.",
+    }));
+    setBusy(false);
+    if (r.error) return notify(r.error, "error");
+    notify(done);
+    await refresh();
+  };
   return (
     <section aria-labelledby="tab-summary-title">
       <h1 id="tab-summary-title" className="tab-title">
@@ -137,8 +164,8 @@ export function TabSummary({ data }: { data: TabData }) {
           <h2 id="tab-audit">Hareket kaydı</h2>
           <p className="ad-note">
             Silinen kalemler ve ödemeler, ikram ve indirim değişiklikleri,
-            personel girişleri; kim, ne zaman. Son 50 hareket, yalnızca
-            yönetici görür.
+            personel girişleri; kim, ne zaman. Son 50 hareket; yalnızca
+            yönetici görür ve silebilir.
           </p>
           <ul className="tab-lines tab-audit">
             {data.audit.map((entry) => (
@@ -149,9 +176,34 @@ export function TabSummary({ data }: { data: TabData }) {
                     {formatTime(entry.createdAt)} · {entry.actorName}
                   </span>
                 </span>
+                <button
+                  className="tab-x"
+                  aria-label={`Kaydı sil: ${describeAudit(entry)}`}
+                  disabled={busy}
+                  onClick={() =>
+                    void cleanAudit(() => deleteAuditEntry(entry.id), "Kayıt silindi")
+                  }
+                >
+                  ✕
+                </button>
               </li>
             ))}
           </ul>
+          <button
+            className="tab-danger"
+            disabled={busy}
+            onClick={async () => {
+              if (
+                await confirmAction(
+                  "Hareket kaydının tamamı silinsin mi? Eski kayıtlar dahil hepsi silinir; bu işlem geri alınamaz.",
+                  "Tamamını sil",
+                )
+              )
+                void cleanAudit(clearAudit, "Hareket kaydı temizlendi");
+            }}
+          >
+            Hareket kaydının tamamını sil
+          </button>
         </section>
       )}
       <a className="tab-secondary tab-csv" href="/yonetim/adisyon/csv" download>
